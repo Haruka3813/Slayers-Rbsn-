@@ -1,5 +1,6 @@
 const {
-  agregarExperiencia
+  agregarExperiencia,
+  normalizarPerfil
 } = require("./perfil");
 
 // Enemigos disponibles
@@ -8,36 +9,36 @@ const enemigos = [
     id: "slime",
     nombre: "Slime",
     nivel: 1,
-    vida: 50,
+    vida: 20,
     ataque: 8,
-    defensa: 2,
+    defensa: 0,
     experiencia: 25
   },
   {
     id: "goblin",
     nombre: "Goblin",
     nivel: 2,
-    vida: 80,
+    vida: 40,
     ataque: 12,
-    defensa: 4,
+    defensa: 2,
     experiencia: 40
   },
   {
     id: "lobo",
     nombre: "Lobo salvaje",
     nivel: 3,
-    vida: 110,
+    vida: 60,
     ataque: 16,
-    defensa: 6,
+    defensa: 4,
     experiencia: 60
   },
   {
     id: "orco",
     nombre: "Orco",
     nivel: 5,
-    vida: 180,
+    vida: 100,
     ataque: 22,
-    defensa: 10,
+    defensa: 8,
     experiencia: 100
   }
 ];
@@ -49,26 +50,49 @@ function buscarEnemigo(enemigoId) {
   ) || null;
 }
 
+// Adaptar enemigo al nivel del jugador
+function adaptarEnemigo(enemigo, nivelJugador = 1) {
+  const nivel = Math.max(
+    1,
+    Math.min(500, Number(nivelJugador) || 1)
+  );
+
+  const diferencia = nivel - 1;
+
+  return {
+    ...enemigo,
+    nivel,
+    vida: enemigo.vida + diferencia * 20,
+    ataque: enemigo.ataque + diferencia * 2,
+    defensa: enemigo.defensa + diferencia,
+    experiencia: Math.floor(
+      enemigo.experiencia * (1 + diferencia * 0.1)
+    )
+  };
+}
+
 // Listar enemigos
-function listarEnemigos() {
-  return enemigos.map(enemigo => ({
-    ...enemigo
-  }));
+function listarEnemigos(nivelJugador = 1) {
+  return enemigos.map(enemigo =>
+    adaptarEnemigo(enemigo, nivelJugador)
+  );
 }
 
 // Iniciar combate
 function iniciarCombate(perfil, enemigoId) {
-  const enemigo = buscarEnemigo(enemigoId);
-
-  if (!enemigo) {
-    return {
-      error: "No se encontró ese enemigo."
-    };
-  }
-
   if (!perfil || !perfil.estadisticas) {
     return {
       error: "El perfil del jugador no es válido."
+    };
+  }
+
+  normalizarPerfil(perfil);
+
+  const enemigoBase = buscarEnemigo(enemigoId);
+
+  if (!enemigoBase) {
+    return {
+      error: "No se encontró ese enemigo."
     };
   }
 
@@ -78,15 +102,22 @@ function iniciarCombate(perfil, enemigoId) {
     };
   }
 
+  const enemigo = adaptarEnemigo(
+    enemigoBase,
+    perfil.nivel
+  );
+
   return {
     terminado: false,
     turno: "jugador",
+
     jugador: {
       vida: perfil.estadisticas.vida,
-      vidaMaxima: perfil.estadisticas.vida,
+      vidaMaxima: perfil.estadisticas.vidaMaxima,
       ataque: perfil.estadisticas.ataque,
       defensa: perfil.estadisticas.defensa
     },
+
     enemigo: {
       ...enemigo,
       vidaMaxima: enemigo.vida
@@ -110,7 +141,8 @@ function atacarEnemigo(combate) {
 
   const dano = Math.max(
     1,
-    combate.jugador.ataque - combate.enemigo.defensa
+    combate.jugador.ataque -
+    combate.enemigo.defensa
   );
 
   combate.enemigo.vida = Math.max(
@@ -124,6 +156,7 @@ function atacarEnemigo(combate) {
 
     return {
       combate,
+      dano,
       mensaje: `Derrotaste a ${combate.enemigo.nombre}.`,
       experiencia: combate.enemigo.experiencia
     };
@@ -154,7 +187,8 @@ function atacarJugador(combate) {
 
   const dano = Math.max(
     1,
-    combate.enemigo.ataque - combate.jugador.defensa
+    combate.enemigo.ataque -
+    combate.jugador.defensa
   );
 
   combate.jugador.vida = Math.max(
@@ -168,6 +202,7 @@ function atacarJugador(combate) {
 
     return {
       combate,
+      dano,
       mensaje: "Tu personaje fue derrotado."
     };
   }
@@ -189,10 +224,19 @@ function finalizarCombate(perfil, combate) {
     };
   }
 
+  normalizarPerfil(perfil);
+
   perfil.estadisticas.vida = combate.jugador.vida;
 
   if (combate.resultado === "victoria") {
-    perfil.estadisticas.victorias++;
+    perfil.estadisticas.victorias =
+      (perfil.estadisticas.victorias || 0) + 1;
+
+    perfil.estadisticas.combatesGanados =
+      (perfil.estadisticas.combatesGanados || 0) + 1;
+
+    perfil.estadisticas.monstruosDerrotados =
+      (perfil.estadisticas.monstruosDerrotados || 0) + 1;
 
     const resultado = agregarExperiencia(
       perfil,
@@ -207,7 +251,11 @@ function finalizarCombate(perfil, combate) {
     };
   }
 
-  perfil.estadisticas.derrotas++;
+  perfil.estadisticas.derrotas =
+    (perfil.estadisticas.derrotas || 0) + 1;
+
+  perfil.estadisticas.combatesPerdidos =
+    (perfil.estadisticas.combatesPerdidos || 0) + 1;
 
   return {
     perfil,
@@ -218,6 +266,7 @@ function finalizarCombate(perfil, combate) {
 module.exports = {
   enemigos,
   buscarEnemigo,
+  adaptarEnemigo,
   listarEnemigos,
   iniciarCombate,
   atacarEnemigo,

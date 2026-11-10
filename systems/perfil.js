@@ -3,8 +3,15 @@
 // =================================
 
 const NIVEL_MAXIMO = 500;
+
 const VIDA_INICIAL = 100;
 const VIDA_POR_NIVEL = 10;
+
+const ATAQUE_INICIAL = 10;
+const ATAQUE_POR_NIVEL = 2;
+
+const DEFENSA_INICIAL = 5;
+const DEFENSA_POR_NIVEL = 1;
 
 // CREAR PERFIL
 function crearPerfil(userId, username) {
@@ -20,10 +27,10 @@ function crearPerfil(userId, username) {
     reserva: 0,
 
     estadisticas: {
-      vida: 100,
-      vidaMaxima: 100,
-      ataque: 10,
-      defensa: 5,
+      vida: VIDA_INICIAL,
+      vidaMaxima: VIDA_INICIAL,
+      ataque: ATAQUE_INICIAL,
+      defensa: DEFENSA_INICIAL,
 
       victorias: 0,
       derrotas: 0,
@@ -80,7 +87,20 @@ function experienciaNecesaria(nivel) {
 
 // VIDA MAXIMA
 function vidaMaxima(nivel) {
-  return VIDA_INICIAL + ((nivel - 1) * VIDA_POR_NIVEL);
+  return VIDA_INICIAL +
+    ((nivel - 1) * VIDA_POR_NIVEL);
+}
+
+// ATAQUE
+function ataquePorNivel(nivel) {
+  return ATAQUE_INICIAL +
+    ((nivel - 1) * ATAQUE_POR_NIVEL);
+}
+
+// DEFENSA
+function defensaPorNivel(nivel) {
+  return DEFENSA_INICIAL +
+    ((nivel - 1) * DEFENSA_POR_NIVEL);
 }
 
 // NORMALIZAR PERFIL
@@ -89,7 +109,7 @@ function normalizarPerfil(perfil) {
 
   perfil.nivel = Math.min(
     NIVEL_MAXIMO,
-    Math.max(1, perfil.nivel || 1)
+    Math.max(1, Number(perfil.nivel) || 1)
   );
 
   perfil.experiencia = perfil.experiencia || 0;
@@ -109,11 +129,16 @@ function normalizarPerfil(perfil) {
   perfil.estadisticas.vida =
     perfil.estadisticas.vida ?? vidaMax;
 
+  perfil.estadisticas.vida = Math.min(
+    perfil.estadisticas.vida,
+    vidaMax
+  );
+
   perfil.estadisticas.ataque =
-    perfil.estadisticas.ataque ?? 10;
+    ataquePorNivel(perfil.nivel);
 
   perfil.estadisticas.defensa =
-    perfil.estadisticas.defensa ?? 5;
+    defensaPorNivel(perfil.nivel);
 
   perfil.estadisticas.victorias =
     perfil.estadisticas.victorias || 0;
@@ -145,6 +170,10 @@ function normalizarPerfil(perfil) {
 
   perfil.regeneracion.bloqueadaHasta =
     perfil.regeneracion.bloqueadaHasta || 0;
+
+  if (!perfil.regeneracion.ultimaActualizacion) {
+    perfil.regeneracion.ultimaActualizacion = Date.now();
+  }
 
   if (!perfil.elementos) {
     perfil.elementos = {
@@ -214,6 +243,8 @@ function agregarExperiencia(perfil, cantidad) {
     };
   }
 
+  const nivelAnterior = perfil.nivel;
+
   perfil.experiencia += cantidad;
 
   let nivelesGanados = 0;
@@ -235,15 +266,21 @@ function agregarExperiencia(perfil, cantidad) {
   if (nivelesGanados > 0) {
     const nuevaVidaMaxima = vidaMaxima(perfil.nivel);
 
-    const diferencia =
-      nuevaVidaMaxima - perfil.estadisticas.vidaMaxima;
+    const diferenciaVida =
+      nuevaVidaMaxima - vidaMaxima(nivelAnterior);
 
     perfil.estadisticas.vidaMaxima = nuevaVidaMaxima;
 
     perfil.estadisticas.vida = Math.min(
       nuevaVidaMaxima,
-      perfil.estadisticas.vida + diferencia
+      perfil.estadisticas.vida + diferenciaVida
     );
+
+    perfil.estadisticas.ataque =
+      ataquePorNivel(perfil.nivel);
+
+    perfil.estadisticas.defensa =
+      defensaPorNivel(perfil.nivel);
   }
 
   return {
@@ -297,6 +334,8 @@ module.exports = {
   normalizarPerfil,
   experienciaNecesaria,
   vidaMaxima,
+  ataquePorNivel,
+  defensaPorNivel,
   agregarExperiencia,
   mostrarPerfil
 };

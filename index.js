@@ -4,7 +4,8 @@ const express = require("express");
 
 const {
   crearPerfil,
-  mostrarPerfil
+  mostrarPerfil,
+  actualizarRegeneracion
 } = require("./systems/perfil");
 
 const {
@@ -95,18 +96,27 @@ async function enviarMensaje(threadId, contenido) {
 // =====================================
 
 async function cargarPerfil(userId, username) {
+  // Si está combatiendo, conservar el perfil del combate
+  if (combatesActivos.has(userId)) {
+    return combatesActivos.get(userId).perfil;
+  }
+
   let perfil = await obtenerPerfil(userId);
 
   if (!perfil) {
     perfil = crearPerfil(userId, username);
-    await guardarPerfil(perfil);
   }
+
+  // Regeneración automática fuera de combate
+  actualizarRegeneracion(perfil, false);
+
+  await guardarPerfil(perfil);
 
   return perfil;
 }
 
 // =====================================
-// FORMATEAR SALDO Y BANCO
+// MOSTRAR ECONOMÍA
 // =====================================
 
 function mostrarEconomia(perfil) {
@@ -116,8 +126,7 @@ function mostrarEconomia(perfil) {
     "💎 ECONOMÍA DE SLAYERS 💎\n\n" +
     `💰 Rubíes disponibles: ${datos.saldo}\n` +
     `🏦 Banco: ${datos.banco}\n` +
-    `🔒 Reserva: ${datos.reserva}\n` +
-    `📦 Límite de reserva: ${datos.limiteReserva}\n\n` +
+    `🔒 Reserva: ${datos.reserva}/${datos.limiteReserva} 💎\n\n` +
     "━━━━━━━━━━━━━━━━━━"
   );
 }
@@ -260,7 +269,7 @@ async function procesarComando(
     return mostrarEconomia(perfil);
   }
 
-  // AGREGAR RUBÍES AL BANCO
+  // AGREGAR AL BANCO
   if (comando.startsWith("&agregar:")) {
     const datos = comando.split(":");
 
@@ -290,7 +299,7 @@ async function procesarComando(
     );
   }
 
-  // RETIRAR RUBÍES DEL BANCO
+  // RETIRAR DEL BANCO
   if (comando.startsWith("&retirar:")) {
     const datos = comando.split(":");
 
@@ -359,12 +368,13 @@ async function procesarComando(
 
     await guardarPerfil(perfil);
 
+    const datosEconomia = consultarSaldo(perfil);
+
     return (
       `🔒 RESERVA ACTUALIZADA\n\n` +
       `${resultado.mensaje}\n\n` +
-      `💰 Rubíes disponibles: ${resultado.saldo}\n` +
-      `🔒 Reserva: ${resultado.reserva}\n` +
-      `📦 Límite: ${resultado.limiteReserva ?? consultarSaldo(perfil).limiteReserva}`
+      `💰 Rubíes disponibles: ${datosEconomia.saldo}\n` +
+      `🔒 Reserva: ${datosEconomia.reserva}/${datosEconomia.limiteReserva} 💎`
     );
   }
 
@@ -441,6 +451,11 @@ async function procesarComando(
       return resultado.error;
     }
 
+    // Marcar el inicio del combate
+    actualizarRegeneracion(perfil, true);
+
+    await guardarPerfil(perfil);
+
     combatesActivos.set(userId, {
       perfil,
       combate: resultado
@@ -465,6 +480,9 @@ async function procesarComando(
     if (!activo) {
       return "No tenés ningún combate activo. Usá &aventura.";
     }
+
+    // Mantener detenida la regeneración durante el combate
+    actualizarRegeneracion(activo.perfil, true);
 
     const combate = activo.combate;
 

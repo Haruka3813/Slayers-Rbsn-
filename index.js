@@ -18,7 +18,8 @@ const {
 
 const {
   mostrarInventario,
-  usarEsencia
+  usarEsencia,
+  agregarEsencia
 } = require("./systems/inventario");
 
 const {
@@ -96,7 +97,6 @@ async function enviarMensaje(threadId, contenido) {
 // =====================================
 
 async function cargarPerfil(userId, username) {
-  // Si está combatiendo, conservar el perfil del combate
   if (combatesActivos.has(userId)) {
     return combatesActivos.get(userId).perfil;
   }
@@ -107,7 +107,6 @@ async function cargarPerfil(userId, username) {
     perfil = crearPerfil(userId, username);
   }
 
-  // Regeneración automática fuera de combate
   actualizarRegeneracion(perfil, false);
 
   await guardarPerfil(perfil);
@@ -146,6 +145,64 @@ function validarCantidad(valor) {
   }
 
   return cantidad;
+}
+
+// =====================================
+// RECOMPENSA DE RUBÍES
+// =====================================
+
+function calcularRubies(enemigo, nivelJugador) {
+  const recompensas = {
+    slime: 10,
+    goblin: 18,
+    lobo: 28,
+    orco: 45
+  };
+
+  const base = recompensas[enemigo.id] || 10;
+
+  const nivel = Math.max(
+    1,
+    Number(nivelJugador) || 1
+  );
+
+  return Math.floor(
+    base * (1 + (nivel - 1) * 0.15)
+  );
+}
+
+// =====================================
+// BOTÍN ALEATORIO
+// =====================================
+
+function calcularBotin(enemigo) {
+  const probabilidades = {
+    slime: 8,
+    goblin: 12,
+    lobo: 16,
+    orco: 20
+  };
+
+  const probabilidad =
+    probabilidades[enemigo.id] || 8;
+
+  const tirada = Math.random() * 100;
+
+  if (tirada >= probabilidad) {
+    return null;
+  }
+
+  const rareza = Math.random() * 100;
+
+  if (rareza < 2) {
+    return "legendaria";
+  }
+
+  if (rareza < 15) {
+    return "epica";
+  }
+
+  return "normal";
 }
 
 // =====================================
@@ -223,6 +280,171 @@ function textoEnemigos() {
   });
 
   return texto;
+}
+
+// =====================================
+// EJECUTAR BATALLA AUTOMÁTICA
+// =====================================
+
+function ejecutarBatalla(perfil, combate) {
+  let rondas = 0;
+  let ataquesJugador = 0;
+  let ataquesEnemigo = 0;
+
+  let danoCausado = 0;
+  let danoRecibido = 0;
+
+  const registro = [];
+
+  while (!combate.terminado) {
+    rondas++;
+
+    // TURNO DEL JUGADOR
+
+    const ataque = atacarEnemigo(combate);
+
+    if (ataque.error) {
+      break;
+    }
+
+    combate = ataque.combate || combate;
+
+    ataquesJugador++;
+    danoCausado += ataque.dano || 0;
+
+    registro.push(
+      `🗡️ ${ataquesJugador}. Atacaste e hiciste ${ataque.dano} de daño.`
+    );
+
+    if (combate.terminado) {
+      break;
+    }
+
+    // TURNO DEL ENEMIGO
+
+    const contraataque = atacarJugador(combate);
+
+    if (contraataque.error) {
+      break;
+    }
+
+    combate = contraataque.combate || combate;
+
+    ataquesEnemigo++;
+    danoRecibido += contraataque.dano || 0;
+
+    registro.push(
+      `👹 El enemigo te atacó e hizo ${contraataque.dano} de daño.`
+    );
+  }
+
+  return {
+    combate,
+    rondas,
+    ataquesJugador,
+    ataquesEnemigo,
+    danoCausado,
+    danoRecibido,
+    registro
+  };
+}
+
+// =====================================
+// CONSTRUIR INFORME DE BATALLA
+// =====================================
+
+function construirInformeBatalla(
+  perfil,
+  enemigo,
+  batalla,
+  final
+) {
+  let mensaje =
+    "⚔️━━━━━━━━━━━━━━━━━━⚔️\n" +
+    "       INFORME DE BATALLA\n" +
+    "⚔️━━━━━━━━━━━━━━━━━━⚔️\n\n";
+
+  mensaje +=
+    `👹 Enemigo: ${enemigo.nombre}\n` +
+    `📊 Nivel: ${enemigo.nivel}\n\n`;
+
+  mensaje += "📜 DESARROLLO DE LA BATALLA\n\n";
+
+  batalla.registro.forEach((linea, index) => {
+    mensaje += linea + "\n";
+  });
+
+  mensaje +=
+    "\n━━━━━━━━━━━━━━━━━━\n" +
+    "📊 ESTADÍSTICAS DE BATALLA\n\n" +
+    `🔄 Rondas: ${batalla.rondas}\n` +
+    `🗡️ Tus ataques: ${batalla.ataquesJugador}\n` +
+    `👹 Ataques enemigos: ${batalla.ataquesEnemigo}\n` +
+    `💥 Daño causado: ${batalla.danoCausado}\n` +
+    `💔 Daño recibido: ${batalla.danoRecibido}\n\n`;
+
+  mensaje +=
+    `❤️ Tu vida final: ${perfil.estadisticas.vida}/${perfil.estadisticas.vidaMaxima}\n` +
+    `👹 Vida final del enemigo: ${batalla.combate.enemigo.vida}/${batalla.combate.enemigo.vidaMaxima}\n\n`;
+
+  mensaje += "━━━━━━━━━━━━━━━━━━\n";
+
+  if (final.resultado === "victoria") {
+    const rubies = calcularRubies(
+      enemigo,
+      perfil.nivel
+    );
+
+    perfil.rubies =
+      (Number(perfil.rubies) || 0) + rubies;
+
+    perfil.monedas = perfil.rubies;
+
+    perfil.estadisticas.rubiesObtenidos =
+      (Number(perfil.estadisticas.rubiesObtenidos) || 0) +
+      rubies;
+
+    const botin = calcularBotin(enemigo);
+
+    let mensajeBotin = "🎁 Botín: No encontraste objetos.";
+
+    if (botin) {
+      agregarEsencia(perfil, botin, 1);
+
+      const nombres = {
+        normal: "Esencia normal ⚪",
+        epica: "Esencia épica 🟣",
+        legendaria: "Esencia legendaria 🟡"
+      };
+
+      mensajeBotin =
+        `🎁 Botín obtenido: ${nombres[botin]}`;
+    }
+
+    mensaje +=
+      "🏆 ¡VICTORIA!\n\n" +
+      `⭐ Experiencia: +${final.experiencia || 0} XP\n` +
+      `💎 Rubíes obtenidos: +${rubies}\n` +
+      `${mensajeBotin}\n\n`;
+
+    if (final.subioNivel) {
+      mensaje += "⬆️ ¡SUBISTE DE NIVEL!\n\n";
+    }
+
+    mensaje +=
+      `💰 Total de rubíes: ${perfil.rubies}\n`;
+  } else {
+    mensaje +=
+      "💀 ¡HAS SIDO DERROTADO!\n\n" +
+      `📉 Experiencia perdida: ${final.perdidaExperiencia || 0} XP\n` +
+      `⭐ Experiencia restante: ${final.experienciaRestante || 0} XP\n` +
+      "💎 Rubíes perdidos: 0\n" +
+      "⏳ Regeneración bloqueada: 5 minutos\n";
+  }
+
+  mensaje += "\n⚔️━━━━━━━━━━━━━━━━━━⚔️";
+
+  return mensaje;
 }
 
 // =====================================
@@ -451,7 +673,6 @@ async function procesarComando(
       return resultado.error;
     }
 
-    // Marcar el inicio del combate
     actualizarRegeneracion(perfil, true);
 
     await guardarPerfil(perfil);
@@ -463,10 +684,10 @@ async function procesarComando(
 
     return (
       `⚔️ ¡COMIENZA EL COMBATE!\n\n` +
-      `Enemigo: ${resultado.enemigo.nombre || resultado.enemigo.id}\n` +
-      `Vida del enemigo: ${resultado.enemigo.vida}\n` +
-      `Tu vida: ${resultado.jugador.vida}\n\n` +
-      `Usá &atacar para comenzar tu turno.`
+      `👹 Enemigo: ${resultado.enemigo.nombre || resultado.enemigo.id}\n` +
+      `❤️ Vida del enemigo: ${resultado.enemigo.vida}/${resultado.enemigo.vidaMaxima}\n` +
+      `❤️ Tu vida: ${resultado.jugador.vida}/${resultado.jugador.vidaMaxima}\n\n` +
+      `Usá &atacar para ejecutar toda la batalla.`
     );
   }
 
@@ -481,7 +702,6 @@ async function procesarComando(
       return "No tenés ningún combate activo. Usá &aventura.";
     }
 
-    // Mantener detenida la regeneración durante el combate
     actualizarRegeneracion(activo.perfil, true);
 
     const combate = activo.combate;
@@ -491,89 +711,42 @@ async function procesarComando(
       return "Ese combate ya terminó.";
     }
 
-    if (combate.turno !== "jugador") {
-      return "Todavía no es tu turno.";
+    const enemigo = {
+      ...combate.enemigo
+    };
+
+    const batalla = ejecutarBatalla(
+      activo.perfil,
+      combate
+    );
+
+    activo.combate = batalla.combate;
+
+    if (!batalla.combate.terminado) {
+      return "⚠️ No se pudo completar la batalla. Intentá nuevamente.";
     }
 
-    const ataque = atacarEnemigo(combate);
+    const final = finalizarCombate(
+      activo.perfil,
+      batalla.combate
+    );
 
-    if (ataque.error) {
-      return ataque.error;
+    combatesActivos.delete(userId);
+
+    if (final.error) {
+      return final.error;
     }
 
-    activo.combate = ataque.combate || combate;
+    const mensaje = construirInformeBatalla(
+      final.perfil,
+      enemigo,
+      batalla,
+      final
+    );
 
-    let mensaje = ataque.mensaje || "";
+    await guardarPerfil(final.perfil);
 
-    if (activo.combate.terminado) {
-      const final = finalizarCombate(
-        activo.perfil,
-        activo.combate
-      );
-
-      combatesActivos.delete(userId);
-
-      if (final.error) {
-        return mensaje + "\n" + final.error;
-      }
-
-      await guardarPerfil(final.perfil);
-
-      mensaje +=
-        "\n\n" +
-        (final.resultado === "victoria"
-          ? `🏆 ¡VICTORIA!\nExperiencia obtenida: ${final.experiencia || 0}`
-          : "💀 Has sido derrotado.");
-
-      if (final.subioNivel) {
-        mensaje += "\n⬆️ ¡Subiste de nivel!";
-      }
-
-      return mensaje;
-    }
-
-    const contraataque = atacarJugador(activo.combate);
-
-    if (contraataque.error) {
-      return mensaje + "\n" + contraataque.error;
-    }
-
-    activo.combate = contraataque.combate || activo.combate;
-
-    mensaje += "\n\n" + (contraataque.mensaje || "");
-
-    if (activo.combate.terminado) {
-      const final = finalizarCombate(
-        activo.perfil,
-        activo.combate
-      );
-
-      combatesActivos.delete(userId);
-
-      if (final.error) {
-        return mensaje + "\n" + final.error;
-      }
-
-      await guardarPerfil(final.perfil);
-
-      mensaje +=
-        "\n\n" +
-        (final.resultado === "victoria"
-          ? "🏆 ¡VICTORIA!"
-          : "💀 Has sido derrotado.");
-
-      if (final.experiencia) {
-        mensaje += `\nExperiencia obtenida: ${final.experiencia}`;
-      }
-
-      if (final.subioNivel) {
-        mensaje += "\n⬆️ ¡Subiste de nivel!";
-      }
-
-      return mensaje;
-    }
-
-    return mensaje + "\n\n⚔️ Tu próximo turno: &atacar";
+    return mensaje;
   }
 
   // =====================================

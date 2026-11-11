@@ -26,6 +26,7 @@ const {
   listarEnemigos,
   listarBosses,
   obtenerProximoBoss,
+  buscarBoss,
   iniciarCombate,
   iniciarCombateBoss,
   atacarEnemigo,
@@ -281,9 +282,13 @@ También podés indicar una cantidad:
 
 &boss (desafiar al Boss de tu nivel)
 &bosses (ver catálogo de Bosses)
+&info boss nivel (ver información de un Boss)
 
-Los Bosses aparecen cada 10 niveles.
-Necesitás alcanzar el nivel correspondiente.
+Ejemplo:
+&info boss 50
+
+Los Bosses aparecen cada 50 niveles:
+50, 100, 150... hasta 500.
 
 🏆 RANKINGS
 
@@ -336,12 +341,50 @@ function textoBosses() {
 
   bosses.forEach(boss => {
     texto +=
-      `🔥 ${boss.nombre}\n` +
-      `📊 Nivel: ${boss.nivel}\n` +
-      `👁️ Apariencia: ${boss.apariencia}\n\n`;
+      `🔥 ${boss.nombre} — Nivel ${boss.nivel}\n`;
   });
 
+  texto +=
+    "\n━━━━━━━━━━━━━━━━━━\n" +
+    "Usá &info boss nivel para conocer sus estadísticas.";
+
   return texto;
+}
+
+// =====================================
+// INFORMACIÓN DE UN BOSS
+// =====================================
+
+function textoInfoBoss(nivel) {
+  const boss = buscarBoss(nivel);
+
+  if (!boss) {
+    return (
+      "❌ No existe un Boss en ese nivel.\n\n" +
+      "Los Bosses aparecen cada 50 niveles:\n" +
+      "50, 100, 150, 200... hasta 500.\n\n" +
+      "Usá &bosses para ver el catálogo."
+    );
+  }
+
+  return (
+    "👑━━━━━━━━━━━━━━━━━━👑\n" +
+    "       INFORMACIÓN DEL BOSS\n" +
+    "👑━━━━━━━━━━━━━━━━━━👑\n\n" +
+    `🔥 Nombre: ${boss.nombre}\n` +
+    `📊 Nivel: ${boss.nivel}\n` +
+    `👁️ Apariencia: ${boss.apariencia}\n\n` +
+    "━━━━━━━━━━━━━━━━━━\n" +
+    "📊 ESTADÍSTICAS\n\n" +
+    `❤️ Vida: ${boss.vida}\n` +
+    `⚔️ Ataque: ${boss.ataque}\n` +
+    `🛡️ Defensa: ${boss.defensa}\n` +
+    `⭐ Experiencia: ${boss.experiencia} XP\n\n` +
+    "━━━━━━━━━━━━━━━━━━\n" +
+    "💚 Regeneración: 1.01 puntos cada 1.8 segundos.\n" +
+    "⚔️ No tiene límite de tiempo.\n\n" +
+    "👑━━━━━━━━━━━━━━━━━━👑"
+  );
 }
 
 // =====================================
@@ -873,6 +916,31 @@ async function procesarComando(
 
   if (comando === "&bosses") {
     return textoBosses();
+  }
+
+  // =====================================
+  // INFORMACIÓN DE BOSS
+  // =====================================
+
+  if (comando === "&info") {
+    if (
+      argumentos.length !== 2 ||
+      argumentos[0].toLowerCase() !== "boss"
+    ) {
+      return (
+        "❌ Formato incorrecto.\n\n" +
+        "Usá: &info boss nivel\n" +
+        "Ejemplo: &info boss 50"
+      );
+    }
+
+    const nivel = Number(argumentos[1]);
+
+    if (!Number.isSafeInteger(nivel)) {
+      return "❌ El nivel debe ser un número entero válido.";
+    }
+
+    return textoInfoBoss(nivel);
   }
 
   // =====================================

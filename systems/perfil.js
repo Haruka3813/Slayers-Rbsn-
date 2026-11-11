@@ -13,10 +13,43 @@ const ATAQUE_POR_NIVEL = 2;
 const DEFENSA_INICIAL = 5;
 const DEFENSA_POR_NIVEL = 1;
 
-// REGENERACIÓN
 const TIEMPO_REGENERACION_VIDA = 1800;
 
+// =================================
+// ELEMENTOS DISPONIBLES
+// =================================
+
+const ELEMENTOS_DISPONIBLES = [
+  { id: "fuego", nombre: "🔥 Fuego" },
+  { id: "metal", nombre: "⚙️ Metal" },
+  { id: "rayo", nombre: "⚡ Rayo" },
+  { id: "viento", nombre: "🌪️ Viento" },
+  { id: "tierra", nombre: "🌍 Tierra" },
+  { id: "oscuridad", nombre: "🌑 Oscuridad" },
+  { id: "hielo", nombre: "❄️ Hielo" },
+  { id: "agua", nombre: "💧 Agua" },
+  { id: "luz", nombre: "✨ Luz" },
+  { id: "naturaleza", nombre: "🌿 Naturaleza" },
+  { id: "veneno", nombre: "☠️ Veneno" }
+];
+
+// =================================
+// MULTIPLICADOR POR RENACIMIENTO
+// =================================
+
+function multiplicadorRenacimiento(perfil) {
+  const renacimientos = Math.max(
+    0,
+    Number(perfil.renacer) || 0
+  );
+
+  return Math.pow(2, renacimientos);
+}
+
+// =================================
 // CREAR PERFIL
+// =================================
+
 function crearPerfil(userId, username) {
   return {
     id: userId,
@@ -24,6 +57,9 @@ function crearPerfil(userId, username) {
 
     nivel: 1,
     experiencia: 0,
+
+    renacer: 0,
+    renacerPendiente: false,
 
     rubies: 0,
     banco: 0,
@@ -54,7 +90,8 @@ function crearPerfil(userId, username) {
 
     elementos: {
       primero: null,
-      segundo: null
+      segundo: null,
+      adicionales: []
     },
 
     inventario: {
@@ -79,7 +116,10 @@ function crearPerfil(userId, username) {
   };
 }
 
+// =================================
 // EXPERIENCIA NECESARIA
+// =================================
+
 function experienciaNecesaria(nivel) {
   if (nivel >= NIVEL_MAXIMO) {
     return 0;
@@ -88,25 +128,29 @@ function experienciaNecesaria(nivel) {
   return 100 * Math.pow(2, nivel - 1);
 }
 
-// VIDA MAXIMA
+// =================================
+// ESTADÍSTICAS BASE
+// =================================
+
 function vidaMaxima(nivel) {
   return VIDA_INICIAL +
     ((nivel - 1) * VIDA_POR_NIVEL);
 }
 
-// ATAQUE
 function ataquePorNivel(nivel) {
   return ATAQUE_INICIAL +
     ((nivel - 1) * ATAQUE_POR_NIVEL);
 }
 
-// DEFENSA
 function defensaPorNivel(nivel) {
   return DEFENSA_INICIAL +
     ((nivel - 1) * DEFENSA_POR_NIVEL);
 }
 
+// =================================
 // NORMALIZAR PERFIL
+// =================================
+
 function normalizarPerfil(perfil) {
   if (!perfil) return null;
 
@@ -115,55 +159,80 @@ function normalizarPerfil(perfil) {
     Math.max(1, Number(perfil.nivel) || 1)
   );
 
-  perfil.experiencia = perfil.experiencia || 0;
+  perfil.experiencia =
+    Math.max(0, Number(perfil.experiencia) || 0);
 
-  perfil.rubies = perfil.rubies ?? perfil.monedas ?? 0;
-  perfil.banco = perfil.banco || 0;
-  perfil.reserva = perfil.reserva || 0;
+  perfil.renacer = Math.max(
+    0,
+    Math.floor(Number(perfil.renacer) || 0)
+  );
 
+  perfil.renacerPendiente =
+    Boolean(perfil.renacerPendiente);
+
+  perfil.rubies =
+    Number(perfil.rubies ?? perfil.monedas) || 0;
+
+  perfil.banco = Number(perfil.banco) || 0;
+  perfil.reserva = Number(perfil.reserva) || 0;
+
+  // ESTADÍSTICAS
   if (!perfil.estadisticas) {
     perfil.estadisticas = {};
   }
 
-  const vidaMax = vidaMaxima(perfil.nivel);
+  const multiplicador = multiplicadorRenacimiento(perfil);
+
+  const vidaMax = Math.floor(
+    vidaMaxima(perfil.nivel) * multiplicador
+  );
+
+  const ataque = Math.floor(
+    ataquePorNivel(perfil.nivel) * multiplicador
+  );
+
+  const defensa = Math.floor(
+    defensaPorNivel(perfil.nivel) * multiplicador
+  );
 
   perfil.estadisticas.vidaMaxima = vidaMax;
 
   perfil.estadisticas.vida =
     perfil.estadisticas.vida ?? vidaMax;
 
-  perfil.estadisticas.vida = Math.min(
-    perfil.estadisticas.vida,
-    vidaMax
+  perfil.estadisticas.vida = Math.max(
+    0,
+    Math.min(
+      Number(perfil.estadisticas.vida) || 0,
+      vidaMax
+    )
   );
 
-  perfil.estadisticas.ataque =
-    ataquePorNivel(perfil.nivel);
-
-  perfil.estadisticas.defensa =
-    defensaPorNivel(perfil.nivel);
+  perfil.estadisticas.ataque = ataque;
+  perfil.estadisticas.defensa = defensa;
 
   perfil.estadisticas.victorias =
-    perfil.estadisticas.victorias || 0;
+    Number(perfil.estadisticas.victorias) || 0;
 
   perfil.estadisticas.derrotas =
-    perfil.estadisticas.derrotas || 0;
+    Number(perfil.estadisticas.derrotas) || 0;
 
   perfil.estadisticas.combatesGanados =
-    perfil.estadisticas.combatesGanados || 0;
+    Number(perfil.estadisticas.combatesGanados) || 0;
 
   perfil.estadisticas.combatesPerdidos =
-    perfil.estadisticas.combatesPerdidos || 0;
+    Number(perfil.estadisticas.combatesPerdidos) || 0;
 
   perfil.estadisticas.monstruosDerrotados =
-    perfil.estadisticas.monstruosDerrotados || 0;
+    Number(perfil.estadisticas.monstruosDerrotados) || 0;
 
   perfil.estadisticas.bossesDerrotados =
-    perfil.estadisticas.bossesDerrotados || 0;
+    Number(perfil.estadisticas.bossesDerrotados) || 0;
 
   perfil.estadisticas.rubiesObtenidos =
-    perfil.estadisticas.rubiesObtenidos || 0;
+    Number(perfil.estadisticas.rubiesObtenidos) || 0;
 
+  // REGENERACIÓN
   if (!perfil.regeneracion) {
     perfil.regeneracion = {
       ultimaActualizacion: Date.now(),
@@ -175,15 +244,29 @@ function normalizarPerfil(perfil) {
     Number(perfil.regeneracion.bloqueadaHasta) || 0;
 
   perfil.regeneracion.ultimaActualizacion =
-    Number(perfil.regeneracion.ultimaActualizacion) || Date.now();
+    Number(perfil.regeneracion.ultimaActualizacion) ||
+    Date.now();
 
+  // ELEMENTOS
   if (!perfil.elementos) {
     perfil.elementos = {
       primero: null,
-      segundo: null
+      segundo: null,
+      adicionales: []
     };
   }
 
+  perfil.elementos.primero =
+    perfil.elementos.primero || null;
+
+  perfil.elementos.segundo =
+    perfil.elementos.segundo || null;
+
+  if (!Array.isArray(perfil.elementos.adicionales)) {
+    perfil.elementos.adicionales = [];
+  }
+
+  // INVENTARIO
   if (!perfil.inventario || Array.isArray(perfil.inventario)) {
     perfil.inventario = {
       esencias: {
@@ -198,14 +281,15 @@ function normalizarPerfil(perfil) {
   }
 
   perfil.inventario.esencias = {
-    normal: perfil.inventario.esencias?.normal || 0,
-    epica: perfil.inventario.esencias?.epica || 0,
-    legendaria: perfil.inventario.esencias?.legendaria || 0
+    normal: Number(perfil.inventario.esencias?.normal) || 0,
+    epica: Number(perfil.inventario.esencias?.epica) || 0,
+    legendaria: Number(perfil.inventario.esencias?.legendaria) || 0
   };
 
   perfil.inventario.objetos =
     perfil.inventario.objetos || [];
 
+  // EQUIPAMIENTO
   if (!perfil.equipamiento) {
     perfil.equipamiento = {};
   }
@@ -213,6 +297,7 @@ function normalizarPerfil(perfil) {
   perfil.equipamiento.armadura =
     perfil.equipamiento.armadura || null;
 
+  // MINA
   if (!perfil.mina) {
     perfil.mina = {
       nivel: 1,
@@ -220,7 +305,87 @@ function normalizarPerfil(perfil) {
     };
   }
 
+  perfil.mina.nivel =
+    Number(perfil.mina.nivel) || 1;
+
+  perfil.mina.rubiesPendientes =
+    Number(perfil.mina.rubiesPendientes) || 0;
+
   return perfil;
+}
+
+// =================================
+// RENACIMIENTO
+// =================================
+
+function renacerPerfil(perfil) {
+  if (!perfil) {
+    return {
+      correcto: false,
+      mensaje: "No se encontró tu perfil."
+    };
+  }
+
+  normalizarPerfil(perfil);
+
+  if (perfil.nivel < NIVEL_MAXIMO) {
+    return {
+      correcto: false,
+      mensaje:
+        "❌ Necesitás alcanzar el nivel 500 para renacer."
+    };
+  }
+
+  if (perfil.renacerPendiente) {
+    return {
+      correcto: false,
+      mensaje:
+        "❌ Primero tenés que elegir el elemento de tu renacimiento."
+    };
+  }
+
+  // AUMENTAR CONTADOR
+  perfil.renacer++;
+
+  // REINICIAR NIVEL Y EXPERIENCIA
+  perfil.nivel = 1;
+  perfil.experiencia = 0;
+
+  // DUPLICAR ESTADÍSTICAS
+  const multiplicador = multiplicadorRenacimiento(perfil);
+
+  perfil.estadisticas.vidaMaxima =
+    VIDA_INICIAL * multiplicador;
+
+  perfil.estadisticas.vida =
+    perfil.estadisticas.vidaMaxima;
+
+  perfil.estadisticas.ataque =
+    ATAQUE_INICIAL * multiplicador;
+
+  perfil.estadisticas.defensa =
+    DEFENSA_INICIAL * multiplicador;
+
+  // DESBLOQUEAR NUEVO ELEMENTO
+  perfil.renacerPendiente = true;
+
+  // REINICIAR TEMPORIZADOR DE REGENERACIÓN
+  perfil.regeneracion.ultimaActualizacion = Date.now();
+  perfil.regeneracion.bloqueadaHasta = 0;
+
+  return {
+    correcto: true,
+    renacer: perfil.renacer,
+    multiplicador,
+    mensaje:
+      `🌟 ¡RENACIMIENTO ${perfil.renacer}!\n\n` +
+      "Volviste al nivel 1.\n\n" +
+      `❤️ Vida máxima: ${perfil.estadisticas.vidaMaxima}\n` +
+      `⚔️ Ataque: ${perfil.estadisticas.ataque}\n` +
+      `🛡️ Defensa: ${perfil.estadisticas.defensa}\n\n` +
+      "✨ Desbloqueaste un nuevo elemento permanente.\n" +
+      "Elegilo utilizando el comando &registrar:elemento."
+  };
 }
 
 // =================================
@@ -237,26 +402,22 @@ function actualizarRegeneracion(perfil, enCombate = false) {
   const regeneracion = perfil.regeneracion;
   const estadisticas = perfil.estadisticas;
 
-  // DURANTE EL COMBATE NO SE RECUPERA VIDA
   if (enCombate) {
     regeneracion.ultimaActualizacion = ahora;
     return perfil;
   }
 
-  // SI LA VIDA YA ESTÁ COMPLETA
   if (estadisticas.vida >= estadisticas.vidaMaxima) {
     estadisticas.vida = estadisticas.vidaMaxima;
     regeneracion.ultimaActualizacion = ahora;
     return perfil;
   }
 
-  // BLOQUEO TEMPORAL DESPUÉS DE UNA DERROTA
   if (ahora < regeneracion.bloqueadaHasta) {
     regeneracion.ultimaActualizacion = ahora;
     return perfil;
   }
 
-  // CALCULAR DESDE CUÁNDO PUEDE REGENERARSE
   const inicioRegeneracion = Math.max(
     regeneracion.ultimaActualizacion,
     regeneracion.bloqueadaHasta
@@ -268,7 +429,6 @@ function actualizarRegeneracion(perfil, enCombate = false) {
     return perfil;
   }
 
-  // CALCULAR VIDA RECUPERADA
   const vidaRecuperada = Math.floor(
     tiempoTranscurrido / TIEMPO_REGENERACION_VIDA
   );
@@ -287,7 +447,6 @@ function actualizarRegeneracion(perfil, enCombate = false) {
   const vidaRealRecuperada =
     estadisticas.vida - vidaAnterior;
 
-  // ACTUALIZAR EL TIEMPO
   if (estadisticas.vida >= estadisticas.vidaMaxima) {
     regeneracion.ultimaActualizacion = ahora;
   } else {
@@ -345,10 +504,18 @@ function agregarExperiencia(perfil, cantidad) {
   }
 
   if (nivelesGanados > 0) {
-    const nuevaVidaMaxima = vidaMaxima(perfil.nivel);
+    const multiplicador = multiplicadorRenacimiento(perfil);
+
+    const nuevaVidaMaxima = Math.floor(
+      vidaMaxima(perfil.nivel) * multiplicador
+    );
+
+    const vidaMaximaAnterior = Math.floor(
+      vidaMaxima(nivelAnterior) * multiplicador
+    );
 
     const diferenciaVida =
-      nuevaVidaMaxima - vidaMaxima(nivelAnterior);
+      nuevaVidaMaxima - vidaMaximaAnterior;
 
     perfil.estadisticas.vidaMaxima = nuevaVidaMaxima;
 
@@ -357,11 +524,13 @@ function agregarExperiencia(perfil, cantidad) {
       perfil.estadisticas.vida + diferenciaVida
     );
 
-    perfil.estadisticas.ataque =
-      ataquePorNivel(perfil.nivel);
+    perfil.estadisticas.ataque = Math.floor(
+      ataquePorNivel(perfil.nivel) * multiplicador
+    );
 
-    perfil.estadisticas.defensa =
-      defensaPorNivel(perfil.nivel);
+    perfil.estadisticas.defensa = Math.floor(
+      defensaPorNivel(perfil.nivel) * multiplicador
+    );
   }
 
   return {
@@ -387,9 +556,16 @@ function mostrarPerfil(perfil) {
       ? perfil.elementos.segundo || "Sin elegir"
       : "🔒 Se desbloquea en nivel 25";
 
+  const elementosAdicionales =
+    perfil.elementos.adicionales.length > 0
+      ? perfil.elementos.adicionales.join(", ")
+      : "Ninguno";
+
   return `⚔️ SLAYERS RBSN — PERFIL
 
 👤 Jugador: ${perfil.nombre}
+
+🌟 Renacer: ${perfil.renacer}
 
 ⭐ Nivel: ${perfil.nivel}/${NIVEL_MAXIMO}
 ✨ Experiencia: ${perfil.experiencia}/${experienciaNecesaria(perfil.nivel)}
@@ -404,6 +580,8 @@ function mostrarPerfil(perfil) {
 🔥 Primer elemento: ${perfil.elementos.primero || "Sin elegir"}
 ✨ Segundo elemento: ${segundoElemento}
 
+🌟 Elementos de renacimiento: ${elementosAdicionales}
+
 🏆 Victorias: ${perfil.estadisticas.victorias}
 💀 Derrotas: ${perfil.estadisticas.derrotas}
 
@@ -417,12 +595,15 @@ function mostrarPerfil(perfil) {
 
 module.exports = {
   NIVEL_MAXIMO,
+  ELEMENTOS_DISPONIBLES,
   crearPerfil,
   normalizarPerfil,
   experienciaNecesaria,
   vidaMaxima,
   ataquePorNivel,
   defensaPorNivel,
+  multiplicadorRenacimiento,
+  renacerPerfil,
   actualizarRegeneracion,
   agregarExperiencia,
   mostrarPerfil

@@ -3,39 +3,39 @@ require("dotenv").config();
 const express = require("express");
 
 const {
-crearPerfil,
-mostrarPerfil
+  crearPerfil,
+  mostrarPerfil
 } = require("./systems/perfil");
 
 const {
-consultarSaldo
+  consultarSaldo
 } = require("./systems/economia");
 
 const {
-mostrarInventario,
-usarEsencia
+  mostrarInventario,
+  usarEsencia
 } = require("./systems/inventario");
 
 const {
-listarEnemigos,
-iniciarCombate,
-atacarEnemigo,
-atacarJugador,
-finalizarCombate
+  listarEnemigos,
+  iniciarCombate,
+  atacarEnemigo,
+  atacarJugador,
+  finalizarCombate
 } = require("./systems/rpg");
 
 const {
-rankingPorNivel,
-rankingPorVictorias,
-rankingPorRubies,
-mostrarRanking
+  rankingPorNivel,
+  rankingPorVictorias,
+  rankingPorRubies,
+  mostrarRanking
 } = require("./systems/ranking");
 
 const {
-comprobarConexion,
-guardarPerfil,
-obtenerPerfil,
-obtenerTodosLosPerfiles
+  comprobarConexion,
+  guardarPerfil,
+  obtenerPerfil,
+  obtenerTodosLosPerfiles
 } = require("./database/supabase");
 
 const app = express();
@@ -53,37 +53,37 @@ const mensajesProcesados = new Set();
 // =====================================
 
 async function enviarMensaje(threadId, contenido) {
-if (!BOT_TOKEN) {
-throw new Error("Falta configurar BOT_TOKEN.");
-}
+  if (!BOT_TOKEN) {
+    throw new Error("Falta configurar BOT_TOKEN.");
+  }
 
-if (!threadId) {
-throw new Error("No se recibió el ID de la conversación.");
-}
+  if (!threadId) {
+    throw new Error("No se recibió el ID de la conversación.");
+  }
 
-const respuesta = await fetch(
-"https://api.anarchyapps.org/bot-api/v1/threads/${encodeURIComponent(threadId)}/messages",
-{
-method: "POST",
-headers: {
-Authorization: "Bot " + BOT_TOKEN,
-"Content-Type": "application/json"
-},
-body: JSON.stringify({
-content: String(contenido)
-})
-}
-);
+  const respuesta = await fetch(
+    `https://api.anarchyapps.org/bot-api/v1/threads/${encodeURIComponent(threadId)}/messages`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: "Bot " + BOT_TOKEN,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        content: String(contenido)
+      })
+    }
+  );
 
-const resultado = await respuesta.text();
+  const resultado = await respuesta.text();
 
-if (!respuesta.ok) {
-throw new Error(
-"Error de Anarchy (${respuesta.status}): ${resultado}"
-);
-}
+  if (!respuesta.ok) {
+    throw new Error(
+      `Error de Anarchy (${respuesta.status}): ${resultado}`
+    );
+  }
 
-return resultado;
+  return resultado;
 }
 
 // =====================================
@@ -91,14 +91,14 @@ return resultado;
 // =====================================
 
 async function cargarPerfil(userId, username) {
-let perfil = await obtenerPerfil(userId);
+  let perfil = await obtenerPerfil(userId);
 
-if (!perfil) {
-perfil = crearPerfil(userId, username);
-await guardarPerfil(perfil);
-}
+  if (!perfil) {
+    perfil = crearPerfil(userId, username);
+    await guardarPerfil(perfil);
+  }
 
-return perfil;
+  return perfil;
 }
 
 // =====================================
@@ -106,7 +106,7 @@ return perfil;
 // =====================================
 
 function mostrarAyuda() {
-return `
+  return `
 ⚔️ SLAYERS RBSN ⚔️
 
 📋 COMANDOS BÁSICOS
@@ -148,23 +148,23 @@ Usá & antes de cada comando.
 // =====================================
 
 function textoEnemigos() {
-const enemigos = listarEnemigos();
+  const enemigos = listarEnemigos();
 
-if (!enemigos || enemigos.length === 0) {
-return "No hay enemigos disponibles.";
-}
+  if (!enemigos || enemigos.length === 0) {
+    return "No hay enemigos disponibles.";
+  }
 
-let texto = "⚔️ ENEMIGOS DISPONIBLES ⚔️\n\n";
+  let texto = "⚔️ ENEMIGOS DISPONIBLES ⚔️\n\n";
 
-enemigos.forEach(enemigo => {
-texto +=
-"• ${enemigo.nombre || enemigo.id}\n" +
-"  ID: ${enemigo.id}\n" +
-"  Nivel: ${enemigo.nivel}\n" +
-"  Vida: ${enemigo.vida}\n\n";
-});
+  enemigos.forEach(enemigo => {
+    texto +=
+      `• ${enemigo.nombre || enemigo.id}\n` +
+      `  ID: ${enemigo.id}\n` +
+      `  Nivel: ${enemigo.nivel}\n` +
+      `  Vida: ${enemigo.vida}\n\n`;
+  });
 
-return texto;
+  return texto;
 }
 
 // =====================================
@@ -172,245 +172,241 @@ return texto;
 // =====================================
 
 async function procesarComando(
-texto,
-userId,
-username,
-threadId
+  texto,
+  userId,
+  username,
+  threadId
 ) {
-const partes = texto.trim().split(/\s+/);
-const comando = partes[0].toLowerCase();
-const argumentos = partes.slice(1);
+  const partes = texto.trim().split(/\s+/);
+  const comando = partes[0].toLowerCase();
+  const argumentos = partes.slice(1);
 
-const perfil = await cargarPerfil(userId, username);
+  const perfil = await cargarPerfil(userId, username);
 
-// AYUDA
-if (comando === "&ayuda") {
-return mostrarAyuda();
-}
-
-// PERFIL
-if (comando === "&perfil") {
-return mostrarPerfil(perfil);
-}
-
-// SALDO
-if (comando === "&saldo") {
-return consultarSaldo(perfil);
-}
-
-// INVENTARIO
-if (comando === "&inventario") {
-return mostrarInventario(perfil);
-}
-
-// USAR ESENCIAS
-if (comando.startsWith("&usar:")) {
-const datos = comando.split(":");
-
-if (
-  datos.length < 3 ||
-  datos.length > 4 ||
-  datos[1] !== "esencia"
-) {
-  return (
-    "❌ Formato incorrecto.\n\n" +
-    "Usá:\n" +
-    "&usar:esencia:normal\n" +
-    "&usar:esencia:epica\n" +
-    "&usar:esencia:legendaria\n" +
-    "&usar:esencia:normal:5"
-  );
-}
-
-const rareza = datos[2];
-
-const cantidad = datos.length === 4
-  ? Number(datos[3])
-  : 1;
-
-const resultado = usarEsencia(
-  perfil,
-  rareza,
-  cantidad
-);
-
-if (!resultado.correcto) {
-  return `❌ ${resultado.mensaje}`;
-}
-
-await guardarPerfil(perfil);
-
-return resultado.mensaje;
-
-}
-
-// ENEMIGOS
-if (comando === "&enemigos") {
-return textoEnemigos();
-}
-
-// AVENTURA
-if (comando === "&aventura") {
-if (!argumentos[0]) {
-return textoEnemigos();
-}
-
-if (combatesActivos.has(userId)) {
-  return "Ya tenés un combate activo. Usá &atacar.";
-}
-
-const resultado = iniciarCombate(
-  perfil,
-  argumentos[0].toLowerCase()
-);
-
-if (resultado.error) {
-  return resultado.error;
-}
-
-combatesActivos.set(userId, {
-  perfil,
-  combate: resultado
-});
-
-return (
-  `⚔️ ¡COMIENZA EL COMBATE!\n\n` +
-  `Enemigo: ${resultado.enemigo.nombre || resultado.enemigo.id}\n` +
-  `Vida del enemigo: ${resultado.enemigo.vida}\n` +
-  `Tu vida: ${resultado.jugador.vida}\n\n` +
-  `Usá &atacar para comenzar tu turno.`
-);
-
-}
-
-// ATACAR
-if (comando === "&atacar") {
-const activo = combatesActivos.get(userId);
-
-if (!activo) {
-  return "No tenés ningún combate activo. Usá &aventura.";
-}
-
-const combate = activo.combate;
-
-if (combate.terminado) {
-  combatesActivos.delete(userId);
-  return "Ese combate ya terminó.";
-}
-
-if (combate.turno !== "jugador") {
-  return "Todavía no es tu turno.";
-}
-
-const ataque = atacarEnemigo(combate);
-
-if (ataque.error) {
-  return ataque.error;
-}
-
-activo.combate = ataque.combate || combate;
-
-let mensaje = ataque.mensaje || "";
-
-if (activo.combate.terminado) {
-  const final = finalizarCombate(
-    activo.perfil,
-    activo.combate
-  );
-
-  combatesActivos.delete(userId);
-
-  if (final.error) {
-    return mensaje + "\n" + final.error;
+  // AYUDA
+  if (comando === "&ayuda") {
+    return mostrarAyuda();
   }
 
-  await guardarPerfil(final.perfil);
-
-  mensaje +=
-    "\n\n" +
-    (final.resultado === "victoria"
-      ? `🏆 ¡VICTORIA!\nExperiencia obtenida: ${final.experiencia || 0}`
-      : "💀 Has sido derrotado.");
-
-  if (final.subioNivel) {
-    mensaje += "\n⬆️ ¡Subiste de nivel!";
+  // PERFIL
+  if (comando === "&perfil") {
+    return mostrarPerfil(perfil);
   }
 
-  return mensaje;
-}
-
-const contraataque = atacarJugador(activo.combate);
-
-if (contraataque.error) {
-  return mensaje + "\n" + contraataque.error;
-}
-
-activo.combate = contraataque.combate || activo.combate;
-
-mensaje += "\n\n" + (contraataque.mensaje || "");
-
-if (activo.combate.terminado) {
-  const final = finalizarCombate(
-    activo.perfil,
-    activo.combate
-  );
-
-  combatesActivos.delete(userId);
-
-  if (final.error) {
-    return mensaje + "\n" + final.error;
+  // SALDO
+  if (comando === "&saldo") {
+    return consultarSaldo(perfil);
   }
 
-  await guardarPerfil(final.perfil);
-
-  mensaje +=
-    "\n\n" +
-    (final.resultado === "victoria"
-      ? "🏆 ¡VICTORIA!"
-      : "💀 Has sido derrotado.");
-
-  if (final.experiencia) {
-    mensaje += `\nExperiencia obtenida: ${final.experiencia}`;
+  // INVENTARIO
+  if (comando === "&inventario") {
+    return mostrarInventario(perfil);
   }
 
-  if (final.subioNivel) {
-    mensaje += "\n⬆️ ¡Subiste de nivel!";
+  // USAR ESENCIAS
+  if (comando.startsWith("&usar:")) {
+    const datos = comando.split(":");
+
+    if (
+      datos.length < 3 ||
+      datos.length > 4 ||
+      datos[1] !== "esencia"
+    ) {
+      return (
+        "❌ Formato incorrecto.\n\n" +
+        "Usá:\n" +
+        "&usar:esencia:normal\n" +
+        "&usar:esencia:epica\n" +
+        "&usar:esencia:legendaria\n" +
+        "&usar:esencia:normal:5"
+      );
+    }
+
+    const rareza = datos[2];
+
+    const cantidad = datos.length === 4
+      ? Number(datos[3])
+      : 1;
+
+    const resultado = usarEsencia(
+      perfil,
+      rareza,
+      cantidad
+    );
+
+    if (!resultado.correcto) {
+      return `❌ ${resultado.mensaje}`;
+    }
+
+    await guardarPerfil(perfil);
+
+    return resultado.mensaje;
   }
 
-  return mensaje;
-}
+  // ENEMIGOS
+  if (comando === "&enemigos") {
+    return textoEnemigos();
+  }
 
-return mensaje + "\n\n⚔️ Tu próximo turno: &atacar";
+  // AVENTURA
+  if (comando === "&aventura") {
+    if (!argumentos[0]) {
+      return textoEnemigos();
+    }
 
-}
+    if (combatesActivos.has(userId)) {
+      return "Ya tenés un combate activo. Usá &atacar.";
+    }
 
-// RANKING
-if (comando === "&ranking") {
-let tipo = (argumentos[0] || "nivel").toLowerCase();
+    const resultado = iniciarCombate(
+      perfil,
+      argumentos[0].toLowerCase()
+    );
 
-if (tipo === "monedas") {
-  tipo = "rubies";
-}
+    if (resultado.error) {
+      return resultado.error;
+    }
 
-const perfiles = await obtenerTodosLosPerfiles();
+    combatesActivos.set(userId, {
+      perfil,
+      combate: resultado
+    });
 
-let ranking;
+    return (
+      `⚔️ ¡COMIENZA EL COMBATE!\n\n` +
+      `Enemigo: ${resultado.enemigo.nombre || resultado.enemigo.id}\n` +
+      `Vida del enemigo: ${resultado.enemigo.vida}\n` +
+      `Tu vida: ${resultado.jugador.vida}\n\n` +
+      `Usá &atacar para comenzar tu turno.`
+    );
+  }
 
-if (tipo === "nivel") {
-  ranking = rankingPorNivel(perfiles);
-} else if (tipo === "victorias") {
-  ranking = rankingPorVictorias(perfiles);
-} else if (tipo === "rubies") {
-  ranking = rankingPorRubies(perfiles);
-} else {
-  return "Tipo de ranking inválido. Usá: nivel, victorias o rubies.";
-}
+  // ATACAR
+  if (comando === "&atacar") {
+    const activo = combatesActivos.get(userId);
 
-return mostrarRanking(ranking, tipo);
+    if (!activo) {
+      return "No tenés ningún combate activo. Usá &aventura.";
+    }
 
-}
+    const combate = activo.combate;
 
-return null;
+    if (combate.terminado) {
+      combatesActivos.delete(userId);
+      return "Ese combate ya terminó.";
+    }
+
+    if (combate.turno !== "jugador") {
+      return "Todavía no es tu turno.";
+    }
+
+    const ataque = atacarEnemigo(combate);
+
+    if (ataque.error) {
+      return ataque.error;
+    }
+
+    activo.combate = ataque.combate || combate;
+
+    let mensaje = ataque.mensaje || "";
+
+    if (activo.combate.terminado) {
+      const final = finalizarCombate(
+        activo.perfil,
+        activo.combate
+      );
+
+      combatesActivos.delete(userId);
+
+      if (final.error) {
+        return mensaje + "\n" + final.error;
+      }
+
+      await guardarPerfil(final.perfil);
+
+      mensaje +=
+        "\n\n" +
+        (final.resultado === "victoria"
+          ? `🏆 ¡VICTORIA!\nExperiencia obtenida: ${final.experiencia || 0}`
+          : "💀 Has sido derrotado.");
+
+      if (final.subioNivel) {
+        mensaje += "\n⬆️ ¡Subiste de nivel!";
+      }
+
+      return mensaje;
+    }
+
+    const contraataque = atacarJugador(activo.combate);
+
+    if (contraataque.error) {
+      return mensaje + "\n" + contraataque.error;
+    }
+
+    activo.combate = contraataque.combate || activo.combate;
+
+    mensaje += "\n\n" + (contraataque.mensaje || "");
+
+    if (activo.combate.terminado) {
+      const final = finalizarCombate(
+        activo.perfil,
+        activo.combate
+      );
+
+      combatesActivos.delete(userId);
+
+      if (final.error) {
+        return mensaje + "\n" + final.error;
+      }
+
+      await guardarPerfil(final.perfil);
+
+      mensaje +=
+        "\n\n" +
+        (final.resultado === "victoria"
+          ? "🏆 ¡VICTORIA!"
+          : "💀 Has sido derrotado.");
+
+      if (final.experiencia) {
+        mensaje += `\nExperiencia obtenida: ${final.experiencia}`;
+      }
+
+      if (final.subioNivel) {
+        mensaje += "\n⬆️ ¡Subiste de nivel!";
+      }
+
+      return mensaje;
+    }
+
+    return mensaje + "\n\n⚔️ Tu próximo turno: &atacar";
+  }
+
+  // RANKING
+  if (comando === "&ranking") {
+    let tipo = (argumentos[0] || "nivel").toLowerCase();
+
+    if (tipo === "monedas") {
+      tipo = "rubies";
+    }
+
+    const perfiles = await obtenerTodosLosPerfiles();
+
+    let ranking;
+
+    if (tipo === "nivel") {
+      ranking = rankingPorNivel(perfiles);
+    } else if (tipo === "victorias") {
+      ranking = rankingPorVictorias(perfiles);
+    } else if (tipo === "rubies") {
+      ranking = rankingPorRubies(perfiles);
+    } else {
+      return "Tipo de ranking inválido. Usá: nivel, victorias o rubies.";
+    }
+
+    return mostrarRanking(ranking, tipo);
+  }
+
+  return null;
 }
 
 // =====================================
@@ -418,71 +414,70 @@ return null;
 // =====================================
 
 app.post("/webhook", (req, res) => {
-const evento = req.body;
+  const evento = req.body;
 
-res.sendStatus(200);
+  res.sendStatus(200);
 
-if (!evento || evento.type !== "message" || !evento.message) {
-return;
-}
-
-const mensaje = evento.message;
-
-const texto = mensaje.content?.trim();
-const userId = mensaje.author?.uid;
-
-const username =
-mensaje.author?.username ||
-mensaje.author?.name ||
-"Jugador";
-
-const messageId = mensaje.messageId;
-const threadId = evento.threadId;
-
-if (!texto || !texto.startsWith("&")) {
-return;
-}
-
-if (!userId || !threadId) {
-return;
-}
-
-if (messageId && mensajesProcesados.has(messageId)) {
-return;
-}
-
-if (messageId) {
-mensajesProcesados.add(messageId);
-}
-
-if (mensajesProcesados.size > 5000) {
-mensajesProcesados.clear();
-}
-
-procesarComando(
-texto,
-String(userId),
-username,
-threadId
-)
-.then(async respuesta => {
-if (respuesta) {
-await enviarMensaje(threadId, respuesta);
-}
-})
-.catch(async error => {
-console.error("Error procesando comando:", error);
-
-  try {
-    await enviarMensaje(
-      threadId,
-      "⚠️ Ocurrió un error al ejecutar el comando. Intentá nuevamente."
-    );
-  } catch (errorEnvio) {
-    console.error("Error enviando respuesta:", errorEnvio);
+  if (!evento || evento.type !== "message" || !evento.message) {
+    return;
   }
-});
 
+  const mensaje = evento.message;
+
+  const texto = mensaje.content?.trim();
+  const userId = mensaje.author?.uid;
+
+  const username =
+    mensaje.author?.username ||
+    mensaje.author?.name ||
+    "Jugador";
+
+  const messageId = mensaje.messageId;
+  const threadId = evento.threadId;
+
+  if (!texto || !texto.startsWith("&")) {
+    return;
+  }
+
+  if (!userId || !threadId) {
+    return;
+  }
+
+  if (messageId && mensajesProcesados.has(messageId)) {
+    return;
+  }
+
+  if (messageId) {
+    mensajesProcesados.add(messageId);
+  }
+
+  if (mensajesProcesados.size > 5000) {
+    mensajesProcesados.clear();
+  }
+
+  procesarComando(
+    texto,
+    String(userId),
+    username,
+    threadId
+  )
+    .then(async respuesta => {
+      if (respuesta) {
+        await enviarMensaje(threadId, respuesta);
+      }
+    })
+    .catch(async error => {
+      console.error("Error procesando comando:", error);
+
+      try {
+        await enviarMensaje(
+          threadId,
+          "⚠️ Ocurrió un error al ejecutar el comando. Intentá nuevamente."
+        );
+      } catch (errorEnvio) {
+        console.error("Error enviando respuesta:", errorEnvio);
+      }
+    });
 });
 
 // =====================================
@@ -490,12 +485,12 @@ console.error("Error procesando comando:", error);
 // =====================================
 
 app.get("/", (req, res) => {
-res.json({
-bot: "Slayers Rbsn",
-estado: "En línea",
-tokenConfigurado: Boolean(BOT_TOKEN),
-supabaseConfigurado: comprobarConexion()
-});
+  res.json({
+    bot: "Slayers Rbsn",
+    estado: "En línea",
+    tokenConfigurado: Boolean(BOT_TOKEN),
+    supabaseConfigurado: comprobarConexion()
+  });
 });
 
 // =====================================
@@ -503,10 +498,13 @@ supabaseConfigurado: comprobarConexion()
 // =====================================
 
 app.listen(PORT, () => {
-console.log("Slayers Rbsn iniciado.");
-console.log("Puerto: ${PORT}");
-console.log("Token configurado: ${Boolean(BOT_TOKEN)}");
-console.log(
-"Supabase: ${comprobarConexion() ? "Configurado" : "No configurado"}"
-);
+  console.log("Slayers Rbsn iniciado.");
+  console.log("Puerto: " + PORT);
+  console.log("Token configurado: " + Boolean(BOT_TOKEN));
+
+  if (comprobarConexion()) {
+    console.log("Supabase: Configurado");
+  } else {
+    console.log("Supabase: No configurado");
+  }
 });

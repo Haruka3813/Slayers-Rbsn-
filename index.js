@@ -242,9 +242,9 @@ También podés indicar una cantidad:
 
 ⚔️ COMANDOS RPG
 
-&cazar
+&cazar (cacería automática)
 &enemigos
-&aventura <enemigo>
+&aventura <enemigo> (elegir monstruo)
 &atacar
 
 🏆 RANKINGS
@@ -337,7 +337,7 @@ function textoZonaCaza(perfil) {
     "Los Bosses aparecen cada 10 niveles.\n" +
     "Cada uno tendrá nombre, apariencia y recompensas únicas.\n\n" +
     "🌲━━━━━━━━━━━━━━━━━━🌲\n" +
-    "Usá &aventura <enemigo> para comenzar a cazar.";
+    "Usá &cazar para iniciar una batalla automática.";
 
   return texto;
 }
@@ -688,11 +688,68 @@ async function procesarComando(
   }
 
   // =====================================
-  // CAZAR
+  // CAZAR AUTOMÁTICAMENTE
   // =====================================
 
   if (comando === "&cazar") {
-    return textoZonaCaza(perfil);
+    if (combatesActivos.has(userId)) {
+      return "Ya tenés un combate activo. Usá &atacar.";
+    }
+
+    const enemigos = listarEnemigos();
+
+    if (!enemigos || enemigos.length === 0) {
+      return "No hay monstruos disponibles para cazar.";
+    }
+
+    const enemigoElegido =
+      enemigos[Math.floor(Math.random() * enemigos.length)];
+
+    const resultado = iniciarCombate(
+      perfil,
+      enemigoElegido.id
+    );
+
+    if (resultado.error) {
+      return resultado.error;
+    }
+
+    const enemigo = {
+      ...resultado.enemigo
+    };
+
+    actualizarRegeneracion(perfil, true);
+
+    await guardarPerfil(perfil);
+
+    const batalla = ejecutarBatalla(
+      perfil,
+      resultado
+    );
+
+    if (!batalla.combate.terminado) {
+      return "⚠️ No se pudo completar la cacería. Intentá nuevamente.";
+    }
+
+    const final = finalizarCombate(
+      perfil,
+      batalla.combate
+    );
+
+    if (final.error) {
+      return final.error;
+    }
+
+    const mensaje = construirInformeBatalla(
+      final.perfil,
+      enemigo,
+      batalla,
+      final
+    );
+
+    await guardarPerfil(final.perfil);
+
+    return mensaje;
   }
 
   // ENEMIGOS
@@ -701,7 +758,7 @@ async function procesarComando(
     return textoEnemigos();
   }
 
-  // AVENTURA
+  // AVENTURA MANUAL
 
   if (comando === "&aventura") {
     if (!argumentos[0]) {

@@ -5,7 +5,10 @@ const express = require("express");
 const {
   crearPerfil,
   mostrarPerfil,
-  actualizarRegeneracion
+  actualizarRegeneracion,
+  renacerPerfil,
+  ELEMENTOS_DISPONIBLES,
+  normalizarPerfil
 } = require("./systems/perfil");
 
 const {
@@ -55,7 +58,6 @@ app.use(express.json());
 const PORT = process.env.PORT || 3000;
 const BOT_TOKEN = process.env.BOT_TOKEN;
 
-// Imagen de perfil alojada en GitHub
 const URL_ICONO =
   "https://raw.githubusercontent.com/Haruka3813/Slayers-Rbsn-/main/slayers-rbsn.jpg";
 
@@ -92,10 +94,6 @@ async function actualizarIconoBot() {
     if (bytes.length > 512 * 1024) {
       throw new Error("La imagen supera el límite de 512 KB de Anarchy.");
     }
-
-    console.log(
-      `Imagen descargada correctamente: ${bytes.length} bytes.`
-    );
 
     const respuesta = await fetch(
       "https://api.anarchyapps.org/bot-api/v1/me/icon",
@@ -190,11 +188,165 @@ async function cargarPerfil(userId, username) {
     perfil = crearPerfil(userId, username);
   }
 
+  normalizarPerfil(perfil);
+
+  if (username) {
+    perfil.nombre = username;
+  }
+
   actualizarRegeneracion(perfil, false);
 
   await guardarPerfil(perfil);
 
   return perfil;
+}
+
+// =====================================
+// COMPROBAR REGISTRO
+// =====================================
+
+function estaRegistrado(perfil) {
+  return Boolean(
+    perfil &&
+    perfil.elementos &&
+    perfil.elementos.primero
+  );
+}
+
+// =====================================
+// MENÚ DE REGISTRO Y ELEMENTOS
+// =====================================
+
+function mostrarMenuElementos(perfil) {
+  normalizarPerfil(perfil);
+
+  let titulo = "";
+  let disponibles = [];
+
+  if (perfil.renacerPendiente) {
+    titulo = "🌟 ELEGÍ TU ELEMENTO DE RENACIMIENTO";
+
+  } else if (!perfil.elementos.primero) {
+    titulo = "⚔️ REGISTRO DE AVENTURERO";
+
+  } else if (
+    perfil.nivel >= 25 &&
+    !perfil.elementos.segundo
+  ) {
+    titulo = "✨ DESBLOQUEASTE TU SEGUNDO ELEMENTO";
+
+  } else {
+    return (
+      "❌ Ya tenés todos los elementos disponibles por ahora."
+    );
+  }
+
+  const elementosElegidos = [
+    perfil.elementos.primero,
+    perfil.elementos.segundo,
+    ...(perfil.elementos.adicionales || [])
+  ].filter(Boolean);
+
+  disponibles = ELEMENTOS_DISPONIBLES.filter(
+    elemento => !elementosElegidos.includes(elemento.id)
+  );
+
+  if (disponibles.length === 0) {
+    return "❌ No quedan elementos disponibles para elegir.";
+  }
+
+  let mensaje =
+    `${titulo}\n\n` +
+    "Elegí un elemento de la siguiente lista:\n\n";
+
+  disponibles.forEach(elemento => {
+    mensaje +=
+      `${elemento.nombre}\n` +
+      `Comando: &registrar:${elemento.id}\n\n`;
+  });
+
+  mensaje +=
+    "⚠️ Tu elección será permanente y no podrás cambiarla.";
+
+  return mensaje;
+}
+
+// =====================================
+// REGISTRAR O ELEGIR ELEMENTO
+// =====================================
+
+async function registrarElemento(perfil, elementoId) {
+  normalizarPerfil(perfil);
+
+  const elemento = ELEMENTOS_DISPONIBLES.find(
+    item => item.id === elementoId
+  );
+
+  if (!elemento) {
+    return (
+      "❌ Ese elemento no existe.\n\n" +
+      mostrarMenuElementos(perfil)
+    );
+  }
+
+  const elementosElegidos = [
+    perfil.elementos.primero,
+    perfil.elementos.segundo,
+    ...(perfil.elementos.adicionales || [])
+  ].filter(Boolean);
+
+  if (elementosElegidos.includes(elementoId)) {
+    return "❌ Ya tenés ese elemento. Elegí uno diferente.";
+  }
+
+  // ELEMENTO DE RENACIMIENTO
+  if (perfil.renacerPendiente) {
+    perfil.elementos.adicionales.push(elementoId);
+
+    perfil.renacerPendiente = false;
+
+    await guardarPerfil(perfil);
+
+    return (
+      `🌟 ¡ELEMENTO DE RENACIMIENTO DESBLOQUEADO!\n\n` +
+      `${elemento.nombre}\n\n` +
+      `🌟 Renacer: ${perfil.renacer}\n` +
+      "Este elemento es permanente."
+    );
+  }
+
+  // PRIMER REGISTRO
+  if (!perfil.elementos.primero) {
+    perfil.elementos.primero = elementoId;
+
+    await guardarPerfil(perfil);
+
+    return (
+      "⚔️ ¡REGISTRO COMPLETADO!\n\n" +
+      `👤 Aventurero: ${perfil.nombre}\n` +
+      `${elemento.nombre}\n\n` +
+      "Tu primer elemento es permanente.\n" +
+      "¡Bienvenido a Slayers Rbsn!"
+    );
+  }
+
+  // SEGUNDO ELEMENTO
+  if (
+    perfil.nivel >= 25 &&
+    !perfil.elementos.segundo
+  ) {
+    perfil.elementos.segundo = elementoId;
+
+    await guardarPerfil(perfil);
+
+    return (
+      "✨ ¡SEGUNDO ELEMENTO DESBLOQUEADO!\n\n" +
+      `${elemento.nombre}\n\n` +
+      "Tu segundo elemento es permanente."
+    );
+  }
+
+  return "❌ No tenés ningún elemento pendiente para elegir.";
 }
 
 // =====================================
@@ -214,7 +366,7 @@ function mostrarEconomia(perfil) {
 }
 
 // =====================================
-// MOSTRAR ESTADÍSTICAS DEL JUGADOR
+// MOSTRAR ESTADÍSTICAS
 // =====================================
 
 function textoEstadisticas(perfil) {
@@ -249,6 +401,7 @@ function textoEstadisticas(perfil) {
     "📊━━━━━━━━━━━━━━━━━━📊\n\n" +
 
     `🧙 Jugador: ${perfil.nombre || "Jugador"}\n` +
+    `🌟 Renacer: ${perfil.renacer || 0}\n` +
     `⭐ Nivel: ${nivel}/500\n` +
     `✨ Experiencia: ${experiencia} XP\n\n` +
 
@@ -263,7 +416,7 @@ function textoEstadisticas(perfil) {
     "👹 ENEMIGOS DERROTADOS\n\n" +
 
     `👹 Monstruos: ${monstruos}\n` +
-    `👑 Bosses: ${bosses}\n\n` +
+    `🐉 Bosses: ${bosses}\n\n` +
 
     "━━━━━━━━━━━━━━━━━━\n" +
     "🏆 RESULTADOS DE COMBATE\n\n" +
@@ -354,24 +507,13 @@ function calcularBotin(enemigo) {
   const rareza = Math.random() * 100;
 
   if (enemigo.esBoss) {
-    if (rareza < 10) {
-      return "legendaria";
-    }
-
-    if (rareza < 45) {
-      return "epica";
-    }
-
+    if (rareza < 10) return "legendaria";
+    if (rareza < 45) return "epica";
     return "normal";
   }
 
-  if (rareza < 2) {
-    return "legendaria";
-  }
-
-  if (rareza < 15) {
-    return "epica";
-  }
+  if (rareza < 2) return "legendaria";
+  if (rareza < 15) return "epica";
 
   return "normal";
 }
@@ -381,11 +523,13 @@ function calcularBotin(enemigo) {
 // =====================================
 
 function mostrarAyuda() {
-  return `
-⚔️ SLAYERS RBSN ⚔️
+  return `⚔️ SLAYERS RBSN ⚔️
+
+📋 REGISTRO
+&registrar
+&registrar:elemento
 
 📋 COMANDOS BÁSICOS
-
 &ayuda
 &perfil
 &estadisticas
@@ -394,18 +538,15 @@ function mostrarAyuda() {
 &zona de caza
 
 💎 ECONOMÍA
-
 &banco
 &agregar:cantidad
 &retirar:cantidad
 
 🔒 RESERVA
-
 &reserva:agregar:cantidad
 &reserva:retirar:cantidad
 
 ✨ COMANDOS DE ESENCIAS
-
 &usar:esencia:normal
 &usar:esencia:epica
 &usar:esencia:legendaria
@@ -413,35 +554,34 @@ function mostrarAyuda() {
 También podés indicar una cantidad:
 &usar:esencia:normal:5
 
-⚔️ COMANDOS RPG
+🌟 RENACIMIENTO
+&renacer
+Disponible al alcanzar el nivel 500.
 
-&cazar (cacería automática)
+⚔️ COMANDOS RPG
+&cazar
 &enemigos
 &aventura <enemigo>
 &atacar
 
 👑 COMANDOS DE BOSS
+&boss
+&bosses
+&info boss nivel
 
-&boss (desafiar al Boss de tu nivel)
-&bosses (ver catálogo de Bosses)
-&info boss nivel (ver información de un Boss)
-
-Ejemplo:
-&info boss 50
+Ejemplo: &info boss 50
 
 Los Bosses aparecen cada 50 niveles:
 50, 100, 150... hasta 500.
 
 🏆 RANKINGS
-
 &ranking
 &ranking nivel
 &ranking victorias
 &ranking rubies
 
 ━━━━━━━━━━━━━━━━━━
-Usá & antes de cada comando.
-`;
+Usá & antes de cada comando.`;
 }
 
 // =====================================
@@ -800,7 +940,7 @@ function construirInformeBatalla(
 }
 
 // =====================================
-// COMANDOS
+// PROCESAR COMANDOS
 // =====================================
 
 async function procesarComando(
@@ -813,19 +953,87 @@ async function procesarComando(
   const comando = partes[0].toLowerCase();
   const argumentos = partes.slice(1);
 
-  const perfil = await cargarPerfil(userId, username);
-
+  // AYUDA DISPONIBLE PARA TODOS
   if (comando === "&ayuda") {
     return mostrarAyuda();
   }
+
+  // CARGAR PERFIL
+  const perfil = await cargarPerfil(userId, username);
+
+  // =====================================
+  // REGISTRO
+  // =====================================
+
+  if (comando === "&registrar") {
+    return mostrarMenuElementos(perfil);
+  }
+
+  if (comando.startsWith("&registrar:")) {
+    const datos = comando.split(":");
+
+    if (datos.length !== 2 || !datos[1]) {
+      return "❌ Formato incorrecto. Usá &registrar:elemento";
+    }
+
+    if (
+      estaRegistrado(perfil) &&
+      !perfil.renacerPendiente &&
+      !(perfil.nivel >= 25 && !perfil.elementos.segundo)
+    ) {
+      return "❌ Ya estás registrado. No puedes volver a registrarte ni cambiar tu elemento.";
+    }
+
+    return registrarElemento(perfil, datos[1]);
+  }
+
+  // =====================================
+  // BLOQUEO DE JUGADORES NO REGISTRADOS
+  // =====================================
+
+  if (!estaRegistrado(perfil)) {
+    return (
+      "❌ Todavía no estás registrado.\n\n" +
+      "Primero elegí tu elemento permanente con:\n" +
+      "&registrar"
+    );
+  }
+
+  // =====================================
+  // RENACIMIENTO
+  // =====================================
+
+  if (comando === "&renacer") {
+    const resultado = renacerPerfil(perfil);
+
+    if (!resultado.correcto) {
+      return resultado.mensaje;
+    }
+
+    await guardarPerfil(perfil);
+
+    return resultado.mensaje;
+  }
+
+  // =====================================
+  // PERFIL
+  // =====================================
 
   if (comando === "&perfil") {
     return mostrarPerfil(perfil);
   }
 
+  // =====================================
+  // ESTADÍSTICAS
+  // =====================================
+
   if (comando === "&estadisticas") {
     return textoEstadisticas(perfil);
   }
+
+  // =====================================
+  // ECONOMÍA
+  // =====================================
 
   if (comando === "&saldo") {
     return mostrarEconomia(perfil);
@@ -845,6 +1053,10 @@ async function procesarComando(
   if (comando === "&banco") {
     return mostrarEconomia(perfil);
   }
+
+  // =====================================
+  // AGREGAR AL BANCO
+  // =====================================
 
   if (comando.startsWith("&agregar:")) {
     const datos = comando.split(":");
@@ -875,6 +1087,10 @@ async function procesarComando(
     );
   }
 
+  // =====================================
+  // RETIRAR DEL BANCO
+  // =====================================
+
   if (comando.startsWith("&retirar:")) {
     const datos = comando.split(":");
 
@@ -903,6 +1119,10 @@ async function procesarComando(
       `🏦 Banco: ${resultado.banco}`
     );
   }
+
+  // =====================================
+  // RESERVA
+  // =====================================
 
   if (comando.startsWith("&reserva:")) {
     const datos = comando.split(":");
@@ -948,6 +1168,10 @@ async function procesarComando(
       `🔒 Reserva: ${datosEconomia.reserva}/${datosEconomia.limiteReserva} 💎`
     );
   }
+
+  // =====================================
+  // USAR ESENCIAS
+  // =====================================
 
   if (comando.startsWith("&usar:")) {
     const datos = comando.split(":");
@@ -1053,13 +1277,25 @@ async function procesarComando(
     return mensaje;
   }
 
+  // =====================================
+  // ENEMIGOS
+  // =====================================
+
   if (comando === "&enemigos") {
     return textoEnemigos();
   }
 
+  // =====================================
+  // BOSSES
+  // =====================================
+
   if (comando === "&bosses") {
     return textoBosses();
   }
+
+  // =====================================
+  // INFORMACIÓN DE BOSS
+  // =====================================
 
   if (comando === "&info") {
     if (
@@ -1120,6 +1356,10 @@ async function procesarComando(
       "Usá &atacar para comenzar la batalla."
     );
   }
+
+  // =====================================
+  // AVENTURA
+  // =====================================
 
   if (comando === "&aventura") {
     if (!argumentos[0]) {
@@ -1285,6 +1525,7 @@ app.post("/webhook", (req, res) => {
         messageId
       })
     );
+
     return;
   }
 
@@ -1353,6 +1594,5 @@ app.listen(PORT, () => {
     console.log("Supabase: No configurado");
   }
 
-  // Actualizar la imagen al iniciar Render
   actualizarIconoBot();
 });

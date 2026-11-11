@@ -13,6 +13,9 @@ const ATAQUE_POR_NIVEL = 2;
 const DEFENSA_INICIAL = 5;
 const DEFENSA_POR_NIVEL = 1;
 
+// REGENERACIÓN
+const TIEMPO_REGENERACION_VIDA = 1800;
+
 // CREAR PERFIL
 function crearPerfil(userId, username) {
   return {
@@ -169,11 +172,10 @@ function normalizarPerfil(perfil) {
   }
 
   perfil.regeneracion.bloqueadaHasta =
-    perfil.regeneracion.bloqueadaHasta || 0;
+    Number(perfil.regeneracion.bloqueadaHasta) || 0;
 
-  if (!perfil.regeneracion.ultimaActualizacion) {
-    perfil.regeneracion.ultimaActualizacion = Date.now();
-  }
+  perfil.regeneracion.ultimaActualizacion =
+    Number(perfil.regeneracion.ultimaActualizacion) || Date.now();
 
   if (!perfil.elementos) {
     perfil.elementos = {
@@ -221,7 +223,86 @@ function normalizarPerfil(perfil) {
   return perfil;
 }
 
+// =================================
+// ACTUALIZAR REGENERACIÓN DE VIDA
+// =================================
+
+function actualizarRegeneracion(perfil, enCombate = false) {
+  if (!perfil) return null;
+
+  normalizarPerfil(perfil);
+
+  const ahora = Date.now();
+
+  const regeneracion = perfil.regeneracion;
+  const estadisticas = perfil.estadisticas;
+
+  // DURANTE EL COMBATE NO SE RECUPERA VIDA
+  if (enCombate) {
+    regeneracion.ultimaActualizacion = ahora;
+    return perfil;
+  }
+
+  // SI LA VIDA YA ESTÁ COMPLETA
+  if (estadisticas.vida >= estadisticas.vidaMaxima) {
+    estadisticas.vida = estadisticas.vidaMaxima;
+    regeneracion.ultimaActualizacion = ahora;
+    return perfil;
+  }
+
+  // BLOQUEO TEMPORAL DESPUÉS DE UNA DERROTA
+  if (ahora < regeneracion.bloqueadaHasta) {
+    regeneracion.ultimaActualizacion = ahora;
+    return perfil;
+  }
+
+  // CALCULAR DESDE CUÁNDO PUEDE REGENERARSE
+  const inicioRegeneracion = Math.max(
+    regeneracion.ultimaActualizacion,
+    regeneracion.bloqueadaHasta
+  );
+
+  const tiempoTranscurrido = ahora - inicioRegeneracion;
+
+  if (tiempoTranscurrido < TIEMPO_REGENERACION_VIDA) {
+    return perfil;
+  }
+
+  // CALCULAR VIDA RECUPERADA
+  const vidaRecuperada = Math.floor(
+    tiempoTranscurrido / TIEMPO_REGENERACION_VIDA
+  );
+
+  if (vidaRecuperada <= 0) {
+    return perfil;
+  }
+
+  const vidaAnterior = estadisticas.vida;
+
+  estadisticas.vida = Math.min(
+    estadisticas.vidaMaxima,
+    estadisticas.vida + vidaRecuperada
+  );
+
+  const vidaRealRecuperada =
+    estadisticas.vida - vidaAnterior;
+
+  // ACTUALIZAR EL TIEMPO
+  if (estadisticas.vida >= estadisticas.vidaMaxima) {
+    regeneracion.ultimaActualizacion = ahora;
+  } else {
+    regeneracion.ultimaActualizacion =
+      inicioRegeneracion +
+      (vidaRealRecuperada * TIEMPO_REGENERACION_VIDA);
+  }
+
+  return perfil;
+}
+
+// =================================
 // AGREGAR EXPERIENCIA
+// =================================
+
 function agregarExperiencia(perfil, cantidad) {
   if (!perfil || cantidad <= 0) {
     return {
@@ -290,7 +371,10 @@ function agregarExperiencia(perfil, cantidad) {
   };
 }
 
+// =================================
 // MOSTRAR PERFIL
+// =================================
+
 function mostrarPerfil(perfil) {
   if (!perfil) {
     return "❌ No se encontró el perfil del jugador.";
@@ -327,7 +411,10 @@ function mostrarPerfil(perfil) {
 🐉 Bosses derrotados: ${perfil.estadisticas.bossesDerrotados}`;
 }
 
+// =================================
 // EXPORTAR FUNCIONES
+// =================================
+
 module.exports = {
   NIVEL_MAXIMO,
   crearPerfil,
@@ -336,6 +423,7 @@ module.exports = {
   vidaMaxima,
   ataquePorNivel,
   defensaPorNivel,
+  actualizarRegeneracion,
   agregarExperiencia,
   mostrarPerfil
 };

@@ -1,6 +1,9 @@
 const {
-  agregarExperiencia,
-  normalizarPerfil
+agregarExperiencia,
+normalizarPerfil,
+vidaMaxima,
+ataquePorNivel,
+defensaPorNivel
 } = require("./perfil");
 
 // =================================
@@ -14,42 +17,42 @@ const TIEMPO_REGENERACION_BOSS = 1800 / 1.01;
 // =================================
 
 const enemigos = [
-  {
-    id: "slime",
-    nombre: "Slime",
-    nivel: 1,
-    vida: 20,
-    ataque: 8,
-    defensa: 0,
-    experiencia: 25
-  },
-  {
-    id: "goblin",
-    nombre: "Goblin",
-    nivel: 2,
-    vida: 40,
-    ataque: 12,
-    defensa: 2,
-    experiencia: 40
-  },
-  {
-    id: "lobo",
-    nombre: "Lobo salvaje",
-    nivel: 3,
-    vida: 60,
-    ataque: 16,
-    defensa: 4,
-    experiencia: 60
-  },
-  {
-    id: "orco",
-    nombre: "Orco",
-    nivel: 5,
-    vida: 100,
-    ataque: 22,
-    defensa: 8,
-    experiencia: 100
-  }
+{
+id: "slime",
+nombre: "Slime",
+nivel: 1,
+vida: 20,
+ataque: 8,
+defensa: 0,
+experiencia: 25
+},
+{
+id: "goblin",
+nombre: "Goblin",
+nivel: 2,
+vida: 40,
+ataque: 12,
+defensa: 2,
+experiencia: 40
+},
+{
+id: "lobo",
+nombre: "Lobo salvaje",
+nivel: 3,
+vida: 60,
+ataque: 16,
+defensa: 4,
+experiencia: 60
+},
+{
+id: "orco",
+nombre: "Orco",
+nivel: 5,
+vida: 100,
+ataque: 22,
+defensa: 8,
+experiencia: 100
+}
 ];
 
 // =================================
@@ -57,33 +60,50 @@ const enemigos = [
 // =================================
 
 const catalogoBosses = [
-  ["Gorath, el Devorador", "Dragón negro de escamas rojas"],
-  ["Varkon, Rey de las Cenizas", "Gigante cubierto de fuego"],
-  ["Nerath, la Bestia Abismal", "Serpiente monstruosa de las profundidades"],
-  ["Drakmor, Señor de la Sangre", "Dragón de cuatro cuernos"],
-  ["Zerath, el Coloso Oscuro", "Gigante de armadura negra"],
-  ["Malgron, Devorador de Almas", "Demonio con alas gigantes"],
-  ["Tharok, el Destructor", "Bestia acorazada de seis patas"],
-  ["Velkris, Reina de las Sombras", "Criatura alada de ojos violetas"],
-  ["Ragnar, el Titán Carmesí", "Titán cubierto de lava"],
-  ["Azrath, Señor del Abismo", "Dragón de tres cabezas"]
+["Gorath, el Devorador", "Dragón negro de escamas rojas"],
+["Varkon, Rey de las Cenizas", "Gigante cubierto de fuego"],
+["Nerath, la Bestia Abismal", "Serpiente monstruosa de las profundidades"],
+["Drakmor, Señor de la Sangre", "Dragón de cuatro cuernos"],
+["Zerath, el Coloso Oscuro", "Gigante de armadura negra"],
+["Malgron, Devorador de Almas", "Demonio con alas gigantes"],
+["Tharok, el Destructor", "Bestia acorazada de seis patas"],
+["Velkris, Reina de las Sombras", "Criatura alada de ojos violetas"],
+["Ragnar, el Titán Carmesí", "Titán cubierto de lava"],
+["Azrath, Señor del Abismo", "Dragón de tres cabezas"]
 ];
 
-// Generar los 10 Bosses
-const bosses = catalogoBosses.map((datos, indice) => {
-  const nivel = (indice + 1) * 50;
+// =================================
+// GENERAR LOS 10 BOSSES
+// =================================
 
-  return {
-    id: `boss_${nivel}`,
-    nombre: datos[0],
-    apariencia: datos[1],
-    nivel,
-    esBoss: true,
-    vida: 250 + (nivel * 30),
-    ataque: 18 + (nivel * 3),
-    defensa: 5 + (nivel * 2),
-    experiencia: 500 + (nivel * 100)
-  };
+const bosses = catalogoBosses.map((datos, indice) => {
+const nivel = (indice + 1) * 50;
+
+const vidaJugador = vidaMaxima(nivel);
+const ataqueJugador = ataquePorNivel(nivel);
+const defensaJugador = defensaPorNivel(nivel);
+
+return {
+id: "boss_${nivel}",
+nombre: datos[0],
+apariencia: datos[1],
+nivel,
+esBoss: true,
+
+// ESTADÍSTICAS EQUILIBRADAS
+vida: Math.floor(vidaJugador * 1.5),
+
+ataque: Math.floor(
+  defensaJugador + (nivel * 0.5)
+),
+
+defensa: Math.floor(
+  ataqueJugador * 0.35
+),
+
+experiencia: 500 + (nivel * 100)
+
+};
 });
 
 // =================================
@@ -91,15 +111,15 @@ const bosses = catalogoBosses.map((datos, indice) => {
 // =================================
 
 function buscarEnemigo(enemigoId) {
-  return enemigos.find(
-    enemigo => enemigo.id === enemigoId
-  ) || null;
+return enemigos.find(
+enemigo => enemigo.id === enemigoId
+) || null;
 }
 
 function buscarBoss(nivel) {
-  return bosses.find(
-    boss => boss.nivel === Number(nivel)
-  ) || null;
+return bosses.find(
+boss => boss.nivel === Number(nivel)
+) || null;
 }
 
 // =================================
@@ -107,23 +127,23 @@ function buscarBoss(nivel) {
 // =================================
 
 function adaptarEnemigo(enemigo, nivelJugador = 1) {
-  const nivel = Math.max(
-    1,
-    Math.min(500, Number(nivelJugador) || 1)
-  );
+const nivel = Math.max(
+1,
+Math.min(500, Number(nivelJugador) || 1)
+);
 
-  const diferencia = nivel - 1;
+const diferencia = nivel - 1;
 
-  return {
-    ...enemigo,
-    nivel,
-    vida: enemigo.vida + diferencia * 20,
-    ataque: enemigo.ataque + diferencia * 2,
-    defensa: enemigo.defensa + diferencia,
-    experiencia: Math.floor(
-      enemigo.experiencia * (1 + diferencia * 0.1)
-    )
-  };
+return {
+...enemigo,
+nivel,
+vida: enemigo.vida + diferencia * 20,
+ataque: enemigo.ataque + diferencia * 2,
+defensa: enemigo.defensa + diferencia,
+experiencia: Math.floor(
+enemigo.experiencia * (1 + diferencia * 0.1)
+)
+};
 }
 
 // =================================
@@ -131,9 +151,9 @@ function adaptarEnemigo(enemigo, nivelJugador = 1) {
 // =================================
 
 function listarEnemigos(nivelJugador = 1) {
-  return enemigos.map(enemigo =>
-    adaptarEnemigo(enemigo, nivelJugador)
-  );
+return enemigos.map(enemigo =>
+adaptarEnemigo(enemigo, nivelJugador)
+);
 }
 
 // =================================
@@ -141,7 +161,7 @@ function listarEnemigos(nivelJugador = 1) {
 // =================================
 
 function listarBosses() {
-  return bosses.map(boss => ({ ...boss }));
+return bosses.map(boss => ({ ...boss }));
 }
 
 // =================================
@@ -149,14 +169,14 @@ function listarBosses() {
 // =================================
 
 function obtenerProximoBoss(nivelJugador = 1) {
-  const nivel = Math.max(
-    1,
-    Math.min(500, Number(nivelJugador) || 1)
-  );
+const nivel = Math.max(
+1,
+Math.min(500, Number(nivelJugador) || 1)
+);
 
-  const nivelBoss = Math.ceil(nivel / 50) * 50;
+const nivelBoss = Math.ceil(nivel / 50) * 50;
 
-  return buscarBoss(nivelBoss);
+return buscarBoss(nivelBoss);
 }
 
 // =================================
@@ -164,50 +184,51 @@ function obtenerProximoBoss(nivelJugador = 1) {
 // =================================
 
 function iniciarCombate(perfil, enemigoId) {
-  if (!perfil || !perfil.estadisticas) {
-    return {
-      error: "El perfil del jugador no es válido."
-    };
-  }
+if (!perfil || !perfil.estadisticas) {
+return {
+error: "El perfil del jugador no es válido."
+};
+}
 
-  normalizarPerfil(perfil);
+normalizarPerfil(perfil);
 
-  const enemigoBase = buscarEnemigo(enemigoId);
+const enemigoBase = buscarEnemigo(enemigoId);
 
-  if (!enemigoBase) {
-    return {
-      error: "No se encontró ese enemigo."
-    };
-  }
+if (!enemigoBase) {
+return {
+error: "No se encontró ese enemigo."
+};
+}
 
-  if (perfil.estadisticas.vida <= 0) {
-    return {
-      error: "Tu personaje no tiene vida suficiente."
-    };
-  }
+if (perfil.estadisticas.vida <= 0) {
+return {
+error: "Tu personaje no tiene vida suficiente."
+};
+}
 
-  const enemigo = adaptarEnemigo(
-    enemigoBase,
-    perfil.nivel
-  );
+const enemigo = adaptarEnemigo(
+enemigoBase,
+perfil.nivel
+);
 
-  return {
-    terminado: false,
-    esBoss: false,
-    turno: "jugador",
+return {
+terminado: false,
+esBoss: false,
+turno: "jugador",
 
-    jugador: {
-      vida: perfil.estadisticas.vida,
-      vidaMaxima: perfil.estadisticas.vidaMaxima,
-      ataque: perfil.estadisticas.ataque,
-      defensa: perfil.estadisticas.defensa
-    },
+jugador: {
+  vida: perfil.estadisticas.vida,
+  vidaMaxima: perfil.estadisticas.vidaMaxima,
+  ataque: perfil.estadisticas.ataque,
+  defensa: perfil.estadisticas.defensa
+},
 
-    enemigo: {
-      ...enemigo,
-      vidaMaxima: enemigo.vida
-    }
-  };
+enemigo: {
+  ...enemigo,
+  vidaMaxima: enemigo.vida
+}
+
+};
 }
 
 // =================================
@@ -215,55 +236,56 @@ function iniciarCombate(perfil, enemigoId) {
 // =================================
 
 function iniciarCombateBoss(perfil) {
-  if (!perfil || !perfil.estadisticas) {
-    return {
-      error: "El perfil del jugador no es válido."
-    };
-  }
+if (!perfil || !perfil.estadisticas) {
+return {
+error: "El perfil del jugador no es válido."
+};
+}
 
-  normalizarPerfil(perfil);
+normalizarPerfil(perfil);
 
-  if (perfil.estadisticas.vida <= 0) {
-    return {
-      error: "Tu personaje no tiene vida suficiente."
-    };
-  }
+if (perfil.estadisticas.vida <= 0) {
+return {
+error: "Tu personaje no tiene vida suficiente."
+};
+}
 
-  if (perfil.nivel < 50 || perfil.nivel % 50 !== 0) {
-    return {
-      error: "Solo puedes desafiar al Boss correspondiente en los niveles 50, 100, 150... hasta 500."
-    };
-  }
+if (perfil.nivel < 50 || perfil.nivel % 50 !== 0) {
+return {
+error: "Solo puedes desafiar al Boss correspondiente en los niveles 50, 100, 150... hasta 500."
+};
+}
 
-  const bossBase = buscarBoss(perfil.nivel);
+const bossBase = buscarBoss(perfil.nivel);
 
-  if (!bossBase) {
-    return {
-      error: "No se encontró el Boss de tu nivel."
-    };
-  }
+if (!bossBase) {
+return {
+error: "No se encontró el Boss de tu nivel."
+};
+}
 
-  const boss = { ...bossBase };
+const boss = { ...bossBase };
 
-  return {
-    terminado: false,
-    esBoss: true,
-    turno: "jugador",
+return {
+terminado: false,
+esBoss: true,
+turno: "jugador",
 
-    jugador: {
-      vida: perfil.estadisticas.vida,
-      vidaMaxima: perfil.estadisticas.vidaMaxima,
-      ataque: perfil.estadisticas.ataque,
-      defensa: perfil.estadisticas.defensa
-    },
+jugador: {
+  vida: perfil.estadisticas.vida,
+  vidaMaxima: perfil.estadisticas.vidaMaxima,
+  ataque: perfil.estadisticas.ataque,
+  defensa: perfil.estadisticas.defensa
+},
 
-    enemigo: {
-      ...boss,
-      vidaMaxima: boss.vida,
-      ultimaRegeneracion: Date.now(),
-      regeneracionAcumulada: 0
-    }
-  };
+enemigo: {
+  ...boss,
+  vidaMaxima: boss.vida,
+  ultimaRegeneracion: Date.now(),
+  regeneracionAcumulada: 0
+}
+
+};
 }
 
 // =================================
@@ -271,61 +293,61 @@ function iniciarCombateBoss(perfil) {
 // =================================
 
 function actualizarRegeneracionBoss(combate, ahora = Date.now()) {
-  if (
-    !combate ||
-    !combate.esBoss ||
-    combate.terminado ||
-    !combate.enemigo
-  ) {
-    return 0;
-  }
+if (
+!combate ||
+!combate.esBoss ||
+combate.terminado ||
+!combate.enemigo
+) {
+return 0;
+}
 
-  const boss = combate.enemigo;
+const boss = combate.enemigo;
 
-  if (boss.vida <= 0) {
-    return 0;
-  }
+if (boss.vida <= 0) {
+return 0;
+}
 
-  if (!boss.ultimaRegeneracion) {
-    boss.ultimaRegeneracion = ahora;
-    return 0;
-  }
+if (!boss.ultimaRegeneracion) {
+boss.ultimaRegeneracion = ahora;
+return 0;
+}
 
-  const tiempoTranscurrido = Math.max(
-    0,
-    ahora - boss.ultimaRegeneracion
-  );
+const tiempoTranscurrido = Math.max(
+0,
+ahora - boss.ultimaRegeneracion
+);
 
-  boss.ultimaRegeneracion = ahora;
+boss.ultimaRegeneracion = ahora;
 
-  const recuperacion =
-    tiempoTranscurrido / TIEMPO_REGENERACION_BOSS;
+const recuperacion =
+tiempoTranscurrido / TIEMPO_REGENERACION_BOSS;
 
-  boss.regeneracionAcumulada =
-    (boss.regeneracionAcumulada || 0) + recuperacion;
+boss.regeneracionAcumulada =
+(boss.regeneracionAcumulada || 0) + recuperacion;
 
-  const puntosRecuperados = Math.floor(
-    boss.regeneracionAcumulada
-  );
+const puntosRecuperados = Math.floor(
+boss.regeneracionAcumulada
+);
 
-  if (puntosRecuperados <= 0) {
-    return 0;
-  }
+if (puntosRecuperados <= 0) {
+return 0;
+}
 
-  const vidaAnterior = boss.vida;
+const vidaAnterior = boss.vida;
 
-  boss.vida = Math.min(
-    boss.vidaMaxima,
-    boss.vida + puntosRecuperados
-  );
+boss.vida = Math.min(
+boss.vidaMaxima,
+boss.vida + puntosRecuperados
+);
 
-  boss.regeneracionAcumulada -= puntosRecuperados;
+boss.regeneracionAcumulada -= puntosRecuperados;
 
-  if (boss.vida >= boss.vidaMaxima) {
-    boss.regeneracionAcumulada = 0;
-  }
+if (boss.vida >= boss.vidaMaxima) {
+boss.regeneracionAcumulada = 0;
+}
 
-  return boss.vida - vidaAnterior;
+return boss.vida - vidaAnterior;
 }
 
 // =================================
@@ -333,52 +355,53 @@ function actualizarRegeneracionBoss(combate, ahora = Date.now()) {
 // =================================
 
 function atacarEnemigo(combate) {
-  if (!combate || combate.terminado) {
-    return {
-      error: "No hay un combate activo."
-    };
-  }
+if (!combate || combate.terminado) {
+return {
+error: "No hay un combate activo."
+};
+}
 
-  if (combate.turno !== "jugador") {
-    return {
-      error: "No es el turno del jugador."
-    };
-  }
+if (combate.turno !== "jugador") {
+return {
+error: "No es el turno del jugador."
+};
+}
 
-  const regeneracion = actualizarRegeneracionBoss(combate);
+const regeneracion = actualizarRegeneracionBoss(combate);
 
-  const dano = Math.max(
-    1,
-    combate.jugador.ataque -
-    combate.enemigo.defensa
-  );
+const dano = Math.max(
+1,
+combate.jugador.ataque -
+combate.enemigo.defensa
+);
 
-  combate.enemigo.vida = Math.max(
-    0,
-    combate.enemigo.vida - dano
-  );
+combate.enemigo.vida = Math.max(
+0,
+combate.enemigo.vida - dano
+);
 
-  if (combate.enemigo.vida <= 0) {
-    combate.terminado = true;
-    combate.resultado = "victoria";
+if (combate.enemigo.vida <= 0) {
+combate.terminado = true;
+combate.resultado = "victoria";
 
-    return {
-      combate,
-      dano,
-      regeneracion,
-      mensaje: `Derrotaste a ${combate.enemigo.nombre}.`,
-      experiencia: combate.enemigo.experiencia
-    };
-  }
+return {
+  combate,
+  dano,
+  regeneracion,
+  mensaje: `Derrotaste a ${combate.enemigo.nombre}.`,
+  experiencia: combate.enemigo.experiencia
+};
 
-  combate.turno = "enemigo";
+}
 
-  return {
-    combate,
-    dano,
-    regeneracion,
-    mensaje: `Causaste ${dano} de daño.`
-  };
+combate.turno = "enemigo";
+
+return {
+combate,
+dano,
+regeneracion,
+mensaje: "Causaste ${dano} de daño."
+};
 }
 
 // =================================
@@ -386,51 +409,52 @@ function atacarEnemigo(combate) {
 // =================================
 
 function atacarJugador(combate) {
-  if (!combate || combate.terminado) {
-    return {
-      error: "No hay un combate activo."
-    };
-  }
+if (!combate || combate.terminado) {
+return {
+error: "No hay un combate activo."
+};
+}
 
-  if (combate.turno !== "enemigo") {
-    return {
-      error: "No es el turno del enemigo."
-    };
-  }
+if (combate.turno !== "enemigo") {
+return {
+error: "No es el turno del enemigo."
+};
+}
 
-  const regeneracion = actualizarRegeneracionBoss(combate);
+const regeneracion = actualizarRegeneracionBoss(combate);
 
-  const dano = Math.max(
-    1,
-    combate.enemigo.ataque -
-    combate.jugador.defensa
-  );
+const dano = Math.max(
+1,
+combate.enemigo.ataque -
+combate.jugador.defensa
+);
 
-  combate.jugador.vida = Math.max(
-    0,
-    combate.jugador.vida - dano
-  );
+combate.jugador.vida = Math.max(
+0,
+combate.jugador.vida - dano
+);
 
-  if (combate.jugador.vida <= 0) {
-    combate.terminado = true;
-    combate.resultado = "derrota";
+if (combate.jugador.vida <= 0) {
+combate.terminado = true;
+combate.resultado = "derrota";
 
-    return {
-      combate,
-      dano,
-      regeneracion,
-      mensaje: "Tu personaje fue derrotado."
-    };
-  }
+return {
+  combate,
+  dano,
+  regeneracion,
+  mensaje: "Tu personaje fue derrotado."
+};
 
-  combate.turno = "jugador";
+}
 
-  return {
-    combate,
-    dano,
-    regeneracion,
-    mensaje: `Recibiste ${dano} de daño.`
-  };
+combate.turno = "jugador";
+
+return {
+combate,
+dano,
+regeneracion,
+mensaje: "Recibiste ${dano} de daño."
+};
 }
 
 // =================================
@@ -438,86 +462,87 @@ function atacarJugador(combate) {
 // =================================
 
 function finalizarCombate(perfil, combate) {
-  if (!perfil || !combate || !combate.terminado) {
-    return {
-      error: "El combate todavía no terminó."
-    };
-  }
+if (!perfil || !combate || !combate.terminado) {
+return {
+error: "El combate todavía no terminó."
+};
+}
 
-  normalizarPerfil(perfil);
+normalizarPerfil(perfil);
 
-  perfil.estadisticas.vida = combate.jugador.vida;
+perfil.estadisticas.vida = combate.jugador.vida;
 
-  // VICTORIA
+// VICTORIA
 
-  if (combate.resultado === "victoria") {
-    perfil.estadisticas.victorias =
-      (perfil.estadisticas.victorias || 0) + 1;
+if (combate.resultado === "victoria") {
+perfil.estadisticas.victorias =
+(perfil.estadisticas.victorias || 0) + 1;
 
-    perfil.estadisticas.combatesGanados =
-      (perfil.estadisticas.combatesGanados || 0) + 1;
+perfil.estadisticas.combatesGanados =
+  (perfil.estadisticas.combatesGanados || 0) + 1;
 
-    if (combate.esBoss) {
-      perfil.estadisticas.bossesDerrotados =
-        (perfil.estadisticas.bossesDerrotados || 0) + 1;
-    } else {
-      perfil.estadisticas.monstruosDerrotados =
-        (perfil.estadisticas.monstruosDerrotados || 0) + 1;
-    }
+if (combate.esBoss) {
+  perfil.estadisticas.bossesDerrotados =
+    (perfil.estadisticas.bossesDerrotados || 0) + 1;
+} else {
+  perfil.estadisticas.monstruosDerrotados =
+    (perfil.estadisticas.monstruosDerrotados || 0) + 1;
+}
 
-    const resultado = agregarExperiencia(
-      perfil,
-      combate.enemigo.experiencia
-    );
+const resultado = agregarExperiencia(
+  perfil,
+  combate.enemigo.experiencia
+);
 
-    return {
-      perfil: resultado.perfil,
-      resultado: "victoria",
-      esBoss: Boolean(combate.esBoss),
-      experiencia: combate.enemigo.experiencia,
-      subioNivel: resultado.subioNivel
-    };
-  }
+return {
+  perfil: resultado.perfil,
+  resultado: "victoria",
+  esBoss: Boolean(combate.esBoss),
+  experiencia: combate.enemigo.experiencia,
+  subioNivel: resultado.subioNivel
+};
 
-  // DERROTA
+}
 
-  perfil.estadisticas.derrotas =
-    (perfil.estadisticas.derrotas || 0) + 1;
+// DERROTA
 
-  perfil.estadisticas.combatesPerdidos =
-    (perfil.estadisticas.combatesPerdidos || 0) + 1;
+perfil.estadisticas.derrotas =
+(perfil.estadisticas.derrotas || 0) + 1;
 
-  const experienciaAnterior = perfil.experiencia || 0;
+perfil.estadisticas.combatesPerdidos =
+(perfil.estadisticas.combatesPerdidos || 0) + 1;
 
-  const perdidaExperiencia = Math.ceil(
-    experienciaAnterior * 0.05
-  );
+const experienciaAnterior = perfil.experiencia || 0;
 
-  perfil.experiencia = Math.max(
-    0,
-    experienciaAnterior - perdidaExperiencia
-  );
+const perdidaExperiencia = Math.ceil(
+experienciaAnterior * 0.05
+);
 
-  const ahora = Date.now();
+perfil.experiencia = Math.max(
+0,
+experienciaAnterior - perdidaExperiencia
+);
 
-  perfil.regeneracion = perfil.regeneracion || {};
+const ahora = Date.now();
 
-  perfil.regeneracion.ultimaActualizacion = ahora;
+perfil.regeneracion = perfil.regeneracion || {};
 
-  perfil.regeneracion.bloqueadaHasta =
-    ahora + (5 * 60 * 1000);
+perfil.regeneracion.ultimaActualizacion = ahora;
 
-  return {
-    perfil,
-    resultado: "derrota",
-    esBoss: Boolean(combate.esBoss),
-    experienciaAnterior,
-    perdidaExperiencia,
-    experienciaRestante: perfil.experiencia,
-    rubiesPerdidos: 0,
-    regeneracionBloqueada: true,
-    tiempoBloqueo: 5 * 60 * 1000
-  };
+perfil.regeneracion.bloqueadaHasta =
+ahora + (5 * 60 * 1000);
+
+return {
+perfil,
+resultado: "derrota",
+esBoss: Boolean(combate.esBoss),
+experienciaAnterior,
+perdidaExperiencia,
+experienciaRestante: perfil.experiencia,
+rubiesPerdidos: 0,
+regeneracionBloqueada: true,
+tiempoBloqueo: 5 * 60 * 1000
+};
 }
 
 // =================================
@@ -525,18 +550,18 @@ function finalizarCombate(perfil, combate) {
 // =================================
 
 module.exports = {
-  enemigos,
-  bosses,
-  buscarEnemigo,
-  buscarBoss,
-  adaptarEnemigo,
-  listarEnemigos,
-  listarBosses,
-  obtenerProximoBoss,
-  iniciarCombate,
-  iniciarCombateBoss,
-  actualizarRegeneracionBoss,
-  atacarEnemigo,
-  atacarJugador,
-  finalizarCombate
+enemigos,
+bosses,
+buscarEnemigo,
+buscarBoss,
+adaptarEnemigo,
+listarEnemigos,
+listarBosses,
+obtenerProximoBoss,
+iniciarCombate,
+iniciarCombateBoss,
+actualizarRegeneracionBoss,
+atacarEnemigo,
+atacarJugador,
+finalizarCombate
 };

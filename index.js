@@ -634,8 +634,8 @@ let mensaje =
 "⚔️━━━━━━━━━━━━━━━━━━⚔️\n\n";
 
 mensaje +=
-"${enemigo.esBoss ? "👑 BOSS: " : "👹 Enemigo: "}${enemigo.nombre}\n" +
-"📊 Nivel: ${enemigo.nivel}\n";
+`${enemigo.esBoss ? "👑 BOSS: " : "👹 Enemigo: "}${enemigo.nombre}\n" +
+"📊 Nivel: ${enemigo.nivel}\n`;
 
 if (enemigo.esBoss) {
 mensaje +=

@@ -242,7 +242,7 @@ También podés indicar una cantidad:
 
 ⚔️ COMANDOS RPG
 
-&zona de caza
+&cazar
 &enemigos
 &aventura <enemigo>
 &atacar
@@ -359,8 +359,6 @@ function ejecutarBatalla(perfil, combate) {
   while (!combate.terminado) {
     rondas++;
 
-    // TURNO DEL JUGADOR
-
     const ataque = atacarEnemigo(combate);
 
     if (ataque.error) {
@@ -379,8 +377,6 @@ function ejecutarBatalla(perfil, combate) {
     if (combate.terminado) {
       break;
     }
-
-    // TURNO DEL ENEMIGO
 
     const contraataque = atacarJugador(combate);
 
@@ -430,7 +426,7 @@ function construirInformeBatalla(
 
   mensaje += "📜 DESARROLLO DE LA BATALLA\n\n";
 
-  batalla.registro.forEach((linea, index) => {
+  batalla.registro.forEach(linea => {
     mensaje += linea + "\n";
   });
 
@@ -523,35 +519,28 @@ async function procesarComando(
 
   const perfil = await cargarPerfil(userId, username);
 
-  // AYUDA
   if (comando === "&ayuda") {
     return mostrarAyuda();
   }
 
-  // PERFIL
   if (comando === "&perfil") {
     return mostrarPerfil(perfil);
   }
 
-  // SALDO
   if (comando === "&saldo") {
     return mostrarEconomia(perfil);
   }
 
-  // INVENTARIO
   if (comando === "&inventario") {
     return mostrarInventario(perfil);
   }
 
-  // =====================================
   // BANCO
-  // =====================================
 
   if (comando === "&banco") {
     return mostrarEconomia(perfil);
   }
 
-  // AGREGAR AL BANCO
   if (comando.startsWith("&agregar:")) {
     const datos = comando.split(":");
 
@@ -581,7 +570,6 @@ async function procesarComando(
     );
   }
 
-  // RETIRAR DEL BANCO
   if (comando.startsWith("&retirar:")) {
     const datos = comando.split(":");
 
@@ -611,9 +599,7 @@ async function procesarComando(
     );
   }
 
-  // =====================================
   // RESERVA
-  // =====================================
 
   if (comando.startsWith("&reserva:")) {
     const datos = comando.split(":");
@@ -660,9 +646,7 @@ async function procesarComando(
     );
   }
 
-  // =====================================
   // USAR ESENCIAS
-  // =====================================
 
   if (comando.startsWith("&usar:")) {
     const datos = comando.split(":");
@@ -704,28 +688,20 @@ async function procesarComando(
   }
 
   // =====================================
-  // ZONA DE CAZA
+  // CAZAR
   // =====================================
 
-  if (
-    comando === "&zona" &&
-    argumentos[0]?.toLowerCase() === "de" &&
-    argumentos[1]?.toLowerCase() === "caza"
-  ) {
+  if (comando === "&cazar") {
     return textoZonaCaza(perfil);
   }
 
-  // =====================================
   // ENEMIGOS
-  // =====================================
 
   if (comando === "&enemigos") {
     return textoEnemigos();
   }
 
-  // =====================================
   // AVENTURA
-  // =====================================
 
   if (comando === "&aventura") {
     if (!argumentos[0]) {
@@ -763,9 +739,7 @@ async function procesarComando(
     );
   }
 
-  // =====================================
   // ATACAR
-  // =====================================
 
   if (comando === "&atacar") {
     const activo = combatesActivos.get(userId);
@@ -821,9 +795,7 @@ async function procesarComando(
     return mensaje;
   }
 
-  // =====================================
   // RANKING
-  // =====================================
 
   if (comando === "&ranking") {
     let tipo = (argumentos[0] || "nivel").toLowerCase();

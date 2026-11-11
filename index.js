@@ -97,7 +97,7 @@ const resultado = await respuesta.text();
 
 if (!respuesta.ok) {
 throw new Error(
-"Error de Anarchy (${respuesta.status}): ${resultado}"
+`Error de Anarchy (${respuesta.status}): ${resultado}`
 );
 }
 

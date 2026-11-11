@@ -16,6 +16,13 @@ const DEFENSA_POR_NIVEL = 1;
 const TIEMPO_REGENERACION_VIDA = 1800;
 
 // =================================
+// CONFIGURACIÓN DE LA MINA
+// =================================
+
+const INTENTOS_MINA_MAXIMOS = 3;
+const TIEMPO_RECARGA_MINA = 5 * 60 * 1000;
+
+// =================================
 // ELEMENTOS DISPONIBLES
 // =================================
 
@@ -109,7 +116,9 @@ function crearPerfil(userId, username) {
 
     mina: {
       nivel: 1,
-      rubiesPendientes: 0
+      rubiesPendientes: 0,
+      intentos: INTENTOS_MINA_MAXIMOS,
+      ultimaRecarga: Date.now()
     },
 
     fechaCreacion: new Date().toISOString()
@@ -176,7 +185,10 @@ function normalizarPerfil(perfil) {
   perfil.banco = Number(perfil.banco) || 0;
   perfil.reserva = Number(perfil.reserva) || 0;
 
+  // =================================
   // ESTADÍSTICAS
+  // =================================
+
   if (!perfil.estadisticas) {
     perfil.estadisticas = {};
   }
@@ -232,7 +244,10 @@ function normalizarPerfil(perfil) {
   perfil.estadisticas.rubiesObtenidos =
     Number(perfil.estadisticas.rubiesObtenidos) || 0;
 
+  // =================================
   // REGENERACIÓN
+  // =================================
+
   if (!perfil.regeneracion) {
     perfil.regeneracion = {
       ultimaActualizacion: Date.now(),
@@ -247,7 +262,10 @@ function normalizarPerfil(perfil) {
     Number(perfil.regeneracion.ultimaActualizacion) ||
     Date.now();
 
+  // =================================
   // ELEMENTOS
+  // =================================
+
   if (!perfil.elementos) {
     perfil.elementos = {
       primero: null,
@@ -266,7 +284,10 @@ function normalizarPerfil(perfil) {
     perfil.elementos.adicionales = [];
   }
 
+  // =================================
   // INVENTARIO
+  // =================================
+
   if (!perfil.inventario || Array.isArray(perfil.inventario)) {
     perfil.inventario = {
       esencias: {
@@ -289,7 +310,10 @@ function normalizarPerfil(perfil) {
   perfil.inventario.objetos =
     perfil.inventario.objetos || [];
 
+  // =================================
   // EQUIPAMIENTO
+  // =================================
+
   if (!perfil.equipamiento) {
     perfil.equipamiento = {};
   }
@@ -297,12 +321,12 @@ function normalizarPerfil(perfil) {
   perfil.equipamiento.armadura =
     perfil.equipamiento.armadura || null;
 
+  // =================================
   // MINA
+  // =================================
+
   if (!perfil.mina) {
-    perfil.mina = {
-      nivel: 1,
-      rubiesPendientes: 0
-    };
+    perfil.mina = {};
   }
 
   perfil.mina.nivel =
@@ -311,7 +335,93 @@ function normalizarPerfil(perfil) {
   perfil.mina.rubiesPendientes =
     Number(perfil.mina.rubiesPendientes) || 0;
 
+  perfil.mina.intentos =
+    perfil.mina.intentos === undefined
+      ? INTENTOS_MINA_MAXIMOS
+      : Math.max(
+          0,
+          Math.min(
+            INTENTOS_MINA_MAXIMOS,
+            Number(perfil.mina.intentos) || 0
+          )
+        );
+
+  perfil.mina.ultimaRecarga =
+    Number(perfil.mina.ultimaRecarga) || Date.now();
+
   return perfil;
+}
+
+// =================================
+// ACTUALIZAR INTENTOS DE MINA
+// =================================
+
+function actualizarMina(perfil) {
+  if (!perfil) return null;
+
+  normalizarPerfil(perfil);
+
+  const ahora = Date.now();
+
+  const mina = perfil.mina;
+
+  const tiempoTranscurrido =
+    ahora - mina.ultimaRecarga;
+
+  if (tiempoTranscurrido >= TIEMPO_RECARGA_MINA) {
+    mina.intentos = INTENTOS_MINA_MAXIMOS;
+    mina.ultimaRecarga = ahora;
+  }
+
+  return perfil;
+}
+
+// =================================
+// CONSUMIR INTENTO DE MINA
+// =================================
+
+function consumirIntentoMina(perfil) {
+  if (!perfil) {
+    return {
+      correcto: false,
+      intentos: 0,
+      mensaje: "❌ No se encontró tu perfil."
+    };
+  }
+
+  actualizarMina(perfil);
+
+  const mina = perfil.mina;
+
+  if (mina.intentos <= 0) {
+    const restante = Math.max(
+      0,
+      TIEMPO_RECARGA_MINA -
+      (Date.now() - mina.ultimaRecarga)
+    );
+
+    const minutos = Math.floor(restante / 60000);
+    const segundos = Math.ceil((restante % 60000) / 1000);
+
+    return {
+      correcto: false,
+      intentos: 0,
+      tiempoRestante: restante,
+      mensaje:
+        "⛏️ Ya utilizaste tus 3 intentos de minería.\n" +
+        `⏳ Próxima recarga en ${minutos}m ${segundos}s.`
+    };
+  }
+
+  mina.intentos--;
+
+  return {
+    correcto: true,
+    intentos: mina.intentos,
+    mensaje:
+      `⛏️ Intento de minería utilizado.\n` +
+      `🔋 Intentos restantes: ${mina.intentos}/${INTENTOS_MINA_MAXIMOS}`
+  };
 }
 
 // =================================
@@ -344,14 +454,11 @@ function renacerPerfil(perfil) {
     };
   }
 
-  // AUMENTAR CONTADOR
   perfil.renacer++;
 
-  // REINICIAR NIVEL Y EXPERIENCIA
   perfil.nivel = 1;
   perfil.experiencia = 0;
 
-  // DUPLICAR ESTADÍSTICAS
   const multiplicador = multiplicadorRenacimiento(perfil);
 
   perfil.estadisticas.vidaMaxima =
@@ -366,10 +473,8 @@ function renacerPerfil(perfil) {
   perfil.estadisticas.defensa =
     DEFENSA_INICIAL * multiplicador;
 
-  // DESBLOQUEAR NUEVO ELEMENTO
   perfil.renacerPendiente = true;
 
-  // REINICIAR TEMPORIZADOR DE REGENERACIÓN
   perfil.regeneracion.ultimaActualizacion = Date.now();
   perfil.regeneracion.bloqueadaHasta = 0;
 
@@ -550,6 +655,7 @@ function mostrarPerfil(perfil) {
   }
 
   normalizarPerfil(perfil);
+  actualizarMina(perfil);
 
   const segundoElemento =
     perfil.nivel >= 25
@@ -582,6 +688,8 @@ function mostrarPerfil(perfil) {
 
 🌟 Elementos de renacimiento: ${elementosAdicionales}
 
+⛏️ Mina: ${perfil.mina.intentos}/${INTENTOS_MINA_MAXIMOS} intentos disponibles
+
 🏆 Victorias: ${perfil.estadisticas.victorias}
 💀 Derrotas: ${perfil.estadisticas.derrotas}
 
@@ -596,6 +704,9 @@ function mostrarPerfil(perfil) {
 module.exports = {
   NIVEL_MAXIMO,
   ELEMENTOS_DISPONIBLES,
+  INTENTOS_MINA_MAXIMOS,
+  TIEMPO_RECARGA_MINA,
+
   crearPerfil,
   normalizarPerfil,
   experienciaNecesaria,
@@ -605,6 +716,8 @@ module.exports = {
   multiplicadorRenacimiento,
   renacerPerfil,
   actualizarRegeneracion,
+  actualizarMina,
+  consumirIntentoMina,
   agregarExperiencia,
   mostrarPerfil
 };

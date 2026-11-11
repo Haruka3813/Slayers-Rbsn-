@@ -1114,7 +1114,7 @@ return (
   `👹 Enemigo: ${resultado.enemigo.nombre || resultado.enemigo.id}\n` +
   `❤️ Vida del enemigo: ${resultado.enemigo.vida}/${resultado.enemigo.vidaMaxima}\n` +
   `❤️ Tu vida: ${resultado.jugador.vida}/${resultado.jugador.vidaMaxima}\n\n` +
-  `Usá &atacar para ejecutar toda la batalla.`
+  "Usá &atacar para ejecutar toda la batalla."
 );
 
 }

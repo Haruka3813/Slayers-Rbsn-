@@ -322,6 +322,7 @@ return `
 &estadisticas
 &saldo
 &inventario
+&zona de caza
 
 💎 ECONOMÍA
 
@@ -768,6 +769,15 @@ return mostrarEconomia(perfil);
 
 if (comando === "&inventario") {
 return mostrarInventario(perfil);
+}
+
+// ZONA DE CAZA
+
+if (
+comando === "&zona" &&
+argumentos.join(" ").toLowerCase() === "de caza"
+) {
+return textoZonaCaza(perfil);
 }
 
 // BANCO

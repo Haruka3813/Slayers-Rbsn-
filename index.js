@@ -8,7 +8,11 @@ const {
 } = require("./systems/perfil");
 
 const {
-  consultarSaldo
+  consultarSaldo,
+  agregarBanco,
+  retirarBanco,
+  agregarReserva,
+  retirarReserva
 } = require("./systems/economia");
 
 const {
@@ -102,6 +106,40 @@ async function cargarPerfil(userId, username) {
 }
 
 // =====================================
+// FORMATEAR SALDO Y BANCO
+// =====================================
+
+function mostrarEconomia(perfil) {
+  const datos = consultarSaldo(perfil);
+
+  return (
+    "💎 ECONOMÍA DE SLAYERS 💎\n\n" +
+    `💰 Rubíes disponibles: ${datos.saldo}\n` +
+    `🏦 Banco: ${datos.banco}\n` +
+    `🔒 Reserva: ${datos.reserva}\n` +
+    `📦 Límite de reserva: ${datos.limiteReserva}\n\n` +
+    "━━━━━━━━━━━━━━━━━━"
+  );
+}
+
+// =====================================
+// VALIDAR CANTIDAD
+// =====================================
+
+function validarCantidad(valor) {
+  const cantidad = Number(valor);
+
+  if (
+    !Number.isSafeInteger(cantidad) ||
+    cantidad <= 0
+  ) {
+    return null;
+  }
+
+  return cantidad;
+}
+
+// =====================================
 // AYUDA
 // =====================================
 
@@ -115,6 +153,17 @@ function mostrarAyuda() {
 &perfil
 &saldo
 &inventario
+
+💎 ECONOMÍA
+
+&banco
+&agregar:cantidad
+&retirar:cantidad
+
+🔒 RESERVA
+
+&reserva:agregar:cantidad
+&reserva:retirar:cantidad
 
 ✨ COMANDOS DE ESENCIAS
 
@@ -195,7 +244,7 @@ async function procesarComando(
 
   // SALDO
   if (comando === "&saldo") {
-    return consultarSaldo(perfil);
+    return mostrarEconomia(perfil);
   }
 
   // INVENTARIO
@@ -203,7 +252,126 @@ async function procesarComando(
     return mostrarInventario(perfil);
   }
 
+  // =====================================
+  // BANCO
+  // =====================================
+
+  if (comando === "&banco") {
+    return mostrarEconomia(perfil);
+  }
+
+  // AGREGAR RUBÍES AL BANCO
+  if (comando.startsWith("&agregar:")) {
+    const datos = comando.split(":");
+
+    if (datos.length !== 2) {
+      return "❌ Formato incorrecto. Usá &agregar:cantidad";
+    }
+
+    const cantidad = validarCantidad(datos[1]);
+
+    if (cantidad === null) {
+      return "❌ Ingresá una cantidad válida de rubíes.";
+    }
+
+    const resultado = agregarBanco(perfil, cantidad);
+
+    if (!resultado.correcto) {
+      return `❌ ${resultado.mensaje}`;
+    }
+
+    await guardarPerfil(perfil);
+
+    return (
+      `🏦 DEPÓSITO REALIZADO\n\n` +
+      `${resultado.mensaje}\n\n` +
+      `💰 Rubíes disponibles: ${resultado.saldo}\n` +
+      `🏦 Banco: ${resultado.banco}`
+    );
+  }
+
+  // RETIRAR RUBÍES DEL BANCO
+  if (comando.startsWith("&retirar:")) {
+    const datos = comando.split(":");
+
+    if (datos.length !== 2) {
+      return "❌ Formato incorrecto. Usá &retirar:cantidad";
+    }
+
+    const cantidad = validarCantidad(datos[1]);
+
+    if (cantidad === null) {
+      return "❌ Ingresá una cantidad válida de rubíes.";
+    }
+
+    const resultado = retirarBanco(perfil, cantidad);
+
+    if (!resultado.correcto) {
+      return `❌ ${resultado.mensaje}`;
+    }
+
+    await guardarPerfil(perfil);
+
+    return (
+      `🏦 RETIRO REALIZADO\n\n` +
+      `${resultado.mensaje}\n\n` +
+      `💰 Rubíes disponibles: ${resultado.saldo}\n` +
+      `🏦 Banco: ${resultado.banco}`
+    );
+  }
+
+  // =====================================
+  // RESERVA
+  // =====================================
+
+  if (comando.startsWith("&reserva:")) {
+    const datos = comando.split(":");
+
+    if (
+      datos.length !== 3 ||
+      !["agregar", "retirar"].includes(datos[1])
+    ) {
+      return (
+        "❌ Formato incorrecto.\n\n" +
+        "Usá:\n" +
+        "&reserva:agregar:cantidad\n" +
+        "&reserva:retirar:cantidad"
+      );
+    }
+
+    const cantidad = validarCantidad(datos[2]);
+
+    if (cantidad === null) {
+      return "❌ Ingresá una cantidad válida de rubíes.";
+    }
+
+    let resultado;
+
+    if (datos[1] === "agregar") {
+      resultado = agregarReserva(perfil, cantidad);
+    } else {
+      resultado = retirarReserva(perfil, cantidad);
+    }
+
+    if (!resultado.correcto) {
+      return `❌ ${resultado.mensaje}`;
+    }
+
+    await guardarPerfil(perfil);
+
+    return (
+      `🔒 RESERVA ACTUALIZADA\n\n` +
+      `${resultado.mensaje}\n\n` +
+      `💰 Rubíes disponibles: ${resultado.saldo}\n` +
+      `🔒 Reserva: ${resultado.reserva}\n` +
+      `📦 Límite: ${resultado.limiteReserva ?? consultarSaldo(perfil).limiteReserva}`
+    );
+  }
+
+  // =====================================
   // USAR ESENCIAS
+  // =====================================
+
   if (comando.startsWith("&usar:")) {
     const datos = comando.split(":");
 
@@ -243,12 +411,18 @@ async function procesarComando(
     return resultado.mensaje;
   }
 
+  // =====================================
   // ENEMIGOS
+  // =====================================
+
   if (comando === "&enemigos") {
     return textoEnemigos();
   }
 
+  // =====================================
   // AVENTURA
+  // =====================================
+
   if (comando === "&aventura") {
     if (!argumentos[0]) {
       return textoEnemigos();
@@ -281,7 +455,10 @@ async function procesarComando(
     );
   }
 
+  // =====================================
   // ATACAR
+  // =====================================
+
   if (comando === "&atacar") {
     const activo = combatesActivos.get(userId);
 
@@ -381,7 +558,10 @@ async function procesarComando(
     return mensaje + "\n\n⚔️ Tu próximo turno: &atacar";
   }
 
+  // =====================================
   // RANKING
+  // =====================================
+
   if (comando === "&ranking") {
     let tipo = (argumentos[0] || "nivel").toLowerCase();
 

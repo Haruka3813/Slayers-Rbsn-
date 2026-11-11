@@ -242,6 +242,7 @@ También podés indicar una cantidad:
 
 ⚔️ COMANDOS RPG
 
+&zona de caza
 &enemigos
 &aventura <enemigo>
 &atacar
@@ -278,6 +279,65 @@ function textoEnemigos() {
       `  Nivel: ${enemigo.nivel}\n` +
       `  Vida: ${enemigo.vida}\n\n`;
   });
+
+  return texto;
+}
+
+// =====================================
+// ZONA DE CAZA
+// =====================================
+
+function textoZonaCaza(perfil) {
+  const enemigos = listarEnemigos();
+
+  const nivelJugador = Math.max(
+    1,
+    Number(perfil.nivel) || 1
+  );
+
+  const proximoBoss =
+    Math.ceil(nivelJugador / 10) * 10;
+
+  let texto =
+    "🌲━━━━━━━━━━━━━━━━━━🌲\n" +
+    "        ZONA DE CAZA\n" +
+    "🌲━━━━━━━━━━━━━━━━━━🌲\n\n";
+
+  texto +=
+    "🗺️ Zona compartida de Slayers Rbsn\n" +
+    "⚔️ Todos los aventureros pueden explorar esta zona.\n\n";
+
+  texto +=
+    `🧙 Tu nivel: ${nivelJugador}\n\n` +
+    "━━━━━━━━━━━━━━━━━━\n" +
+    "👹 MONSTRUOS DE LA ZONA\n\n";
+
+  if (!enemigos || enemigos.length === 0) {
+    texto += "No hay monstruos disponibles actualmente.\n";
+  } else {
+    enemigos.forEach(enemigo => {
+      texto +=
+        `👹 ${enemigo.nombre || enemigo.id}\n` +
+        `   ID: ${enemigo.id}\n` +
+        `   Nivel base: ${enemigo.nivel}\n` +
+        `   ❤️ Vida base: ${enemigo.vida}\n` +
+        `   ⚔️ Ataque base: ${enemigo.ataque}\n` +
+        `   🛡️ Defensa base: ${enemigo.defensa}\n\n`;
+    });
+  }
+
+  texto +=
+    "━━━━━━━━━━━━━━━━━━\n" +
+    "📈 ADAPTACIÓN DE MONSTRUOS\n\n" +
+    "Los monstruos aumentan sus estadísticas según tu nivel.\n" +
+    "Sus recompensas también crecen con tu progreso.\n\n" +
+    "━━━━━━━━━━━━━━━━━━\n" +
+    "👑 PRÓXIMO BOSS\n\n" +
+    `🔥 Boss correspondiente al nivel ${proximoBoss}\n` +
+    "Los Bosses aparecen cada 10 niveles.\n" +
+    "Cada uno tendrá nombre, apariencia y recompensas únicas.\n\n" +
+    "🌲━━━━━━━━━━━━━━━━━━🌲\n" +
+    "Usá &aventura <enemigo> para comenzar a cazar.";
 
   return texto;
 }
@@ -641,6 +701,18 @@ async function procesarComando(
     await guardarPerfil(perfil);
 
     return resultado.mensaje;
+  }
+
+  // =====================================
+  // ZONA DE CAZA
+  // =====================================
+
+  if (
+    comando === "&zona" &&
+    argumentos[0]?.toLowerCase() === "de" &&
+    argumentos[1]?.toLowerCase() === "caza"
+  ) {
+    return textoZonaCaza(perfil);
   }
 
   // =====================================

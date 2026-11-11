@@ -55,8 +55,75 @@ app.use(express.json());
 const PORT = process.env.PORT || 3000;
 const BOT_TOKEN = process.env.BOT_TOKEN;
 
+// Imagen de perfil alojada en GitHub
+const URL_ICONO =
+  "https://raw.githubusercontent.com/Haruka3813/Slayers-Rbsn-/main/slayers-rbsn.jpg";
+
 const combatesActivos = new Map();
 const mensajesProcesados = new Set();
+
+// =====================================
+// ACTUALIZAR IMAGEN DEL BOT
+// =====================================
+
+async function actualizarIconoBot() {
+  if (!BOT_TOKEN) {
+    console.error("No se puede actualizar el icono: falta BOT_TOKEN.");
+    return;
+  }
+
+  try {
+    console.log("Descargando imagen de Slayers-Rbsn...");
+
+    const imagen = await fetch(URL_ICONO);
+
+    if (!imagen.ok) {
+      throw new Error(
+        `No se pudo descargar la imagen: HTTP ${imagen.status}`
+      );
+    }
+
+    const bytes = Buffer.from(await imagen.arrayBuffer());
+
+    if (bytes.length === 0) {
+      throw new Error("La imagen descargada está vacía.");
+    }
+
+    if (bytes.length > 512 * 1024) {
+      throw new Error("La imagen supera el límite de 512 KB de Anarchy.");
+    }
+
+    console.log(
+      `Imagen descargada correctamente: ${bytes.length} bytes.`
+    );
+
+    const respuesta = await fetch(
+      "https://api.anarchyapps.org/bot-api/v1/me/icon",
+      {
+        method: "PUT",
+        headers: {
+          Authorization: "Bot " + BOT_TOKEN,
+          "Content-Type": "image/jpeg"
+        },
+        body: bytes
+      }
+    );
+
+    const resultado = await respuesta.text();
+
+    if (!respuesta.ok) {
+      throw new Error(
+        `Anarchy rechazó la imagen (${respuesta.status}): ${resultado}`
+      );
+    }
+
+    console.log("¡Imagen de perfil de Slayers-Rbsn actualizada!");
+    console.log("Respuesta de Anarchy:", resultado);
+
+  } catch (error) {
+    console.error("Error actualizando la imagen del bot:", error.message);
+  }
+}
 
 // =====================================
 // PAUSA ENTRE TURNOS
@@ -756,10 +823,6 @@ async function procesarComando(
     return mostrarPerfil(perfil);
   }
 
-  // =====================================
-  // ESTADÍSTICAS
-  // =====================================
-
   if (comando === "&estadisticas") {
     return textoEstadisticas(perfil);
   }
@@ -772,16 +835,12 @@ async function procesarComando(
     return mostrarInventario(perfil);
   }
 
-  // ZONA DE CAZA
-
   if (
     comando === "&zona" &&
     argumentos.join(" ").toLowerCase() === "de caza"
   ) {
     return textoZonaCaza(perfil);
   }
-
-  // BANCO
 
   if (comando === "&banco") {
     return mostrarEconomia(perfil);
@@ -845,8 +904,6 @@ async function procesarComando(
     );
   }
 
-  // RESERVA
-
   if (comando.startsWith("&reserva:")) {
     const datos = comando.split(":");
 
@@ -891,8 +948,6 @@ async function procesarComando(
       `🔒 Reserva: ${datosEconomia.reserva}/${datosEconomia.limiteReserva} 💎`
     );
   }
-
-  // USAR ESENCIAS
 
   if (comando.startsWith("&usar:")) {
     const datos = comando.split(":");
@@ -998,21 +1053,13 @@ async function procesarComando(
     return mensaje;
   }
 
-  // ENEMIGOS
-
   if (comando === "&enemigos") {
     return textoEnemigos();
   }
 
-  // CATÁLOGO DE BOSSES
-
   if (comando === "&bosses") {
     return textoBosses();
   }
-
-  // =====================================
-  // INFORMACIÓN DE BOSS
-  // =====================================
 
   if (comando === "&info") {
     if (
@@ -1073,8 +1120,6 @@ async function procesarComando(
       "Usá &atacar para comenzar la batalla."
     );
   }
-
-  // AVENTURA MANUAL
 
   if (comando === "&aventura") {
     if (!argumentos[0]) {
@@ -1307,4 +1352,7 @@ app.listen(PORT, () => {
   } else {
     console.log("Supabase: No configurado");
   }
+
+  // Actualizar la imagen al iniciar Render
+  actualizarIconoBot();
 });

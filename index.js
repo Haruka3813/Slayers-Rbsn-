@@ -8,7 +8,9 @@ const {
   actualizarRegeneracion,
   renacerPerfil,
   ELEMENTOS_DISPONIBLES,
-  normalizarPerfil
+  normalizarPerfil,
+  actualizarMina,
+  consumirIntentoMina
 } = require("./systems/perfil");
 
 const {
@@ -80,9 +82,7 @@ async function actualizarIconoBot() {
     const imagen = await fetch(URL_ICONO);
 
     if (!imagen.ok) {
-      throw new Error(
-        `No se pudo descargar la imagen: HTTP ${imagen.status}`
-      );
+      throw new Error(`No se pudo descargar la imagen: HTTP ${imagen.status}`);
     }
 
     const bytes = Buffer.from(await imagen.arrayBuffer());
@@ -195,6 +195,7 @@ async function cargarPerfil(userId, username) {
   }
 
   actualizarRegeneracion(perfil, false);
+  actualizarMina(perfil);
 
   await guardarPerfil(perfil);
 
@@ -236,9 +237,7 @@ function mostrarMenuElementos(perfil) {
     titulo = "✨ DESBLOQUEASTE TU SEGUNDO ELEMENTO";
 
   } else {
-    return (
-      "❌ Ya tenés todos los elementos disponibles por ahora."
-    );
+    return "❌ Ya tenés todos los elementos disponibles por ahora.";
   }
 
   const elementosElegidos = [
@@ -299,10 +298,8 @@ async function registrarElemento(perfil, elementoId) {
     return "❌ Ya tenés ese elemento. Elegí uno diferente.";
   }
 
-  // ELEMENTO DE RENACIMIENTO
   if (perfil.renacerPendiente) {
     perfil.elementos.adicionales.push(elementoId);
-
     perfil.renacerPendiente = false;
 
     await guardarPerfil(perfil);
@@ -315,7 +312,6 @@ async function registrarElemento(perfil, elementoId) {
     );
   }
 
-  // PRIMER REGISTRO
   if (!perfil.elementos.primero) {
     perfil.elementos.primero = elementoId;
 
@@ -330,7 +326,6 @@ async function registrarElemento(perfil, elementoId) {
     );
   }
 
-  // SEGUNDO ELEMENTO
   if (
     perfil.nivel >= 25 &&
     !perfil.elementos.segundo
@@ -519,6 +514,64 @@ function calcularBotin(enemigo) {
 }
 
 // =====================================
+// MINA DE ESENCIAS
+// =====================================
+
+function obtenerEsenciaMina() {
+  const tirada = Math.random() * 100;
+
+  if (tirada < 70) {
+    return "normal";
+  }
+
+  if (tirada < 95) {
+    return "epica";
+  }
+
+  return "legendaria";
+}
+
+async function ejecutarMineria(perfil) {
+  const resultado = consumirIntentoMina(perfil);
+
+  if (!resultado.correcto) {
+    await guardarPerfil(perfil);
+    return resultado.mensaje;
+  }
+
+  const esencia = obtenerEsenciaMina();
+
+  const agregada = agregarEsencia(
+    perfil,
+    esencia,
+    1
+  );
+
+  if (agregada && agregada.correcto === false) {
+    return "❌ No se pudo guardar la esencia obtenida.";
+  }
+
+  await guardarPerfil(perfil);
+
+  const nombres = {
+    normal: "⚪ Esencia normal",
+    epica: "🟣 Esencia épica",
+    legendaria: "🟡 Esencia legendaria"
+  };
+
+  return (
+    "⛏️━━━━━━━━━━━━━━━━━━⛏️\n" +
+    "       MINA DE ESENCIAS\n" +
+    "⛏️━━━━━━━━━━━━━━━━━━⛏️\n\n" +
+    "🎉 ¡Encontraste una esencia!\n\n" +
+    `${nombres[esencia]}\n\n` +
+    `🔋 Intentos restantes: ${resultado.intentos}/3\n\n` +
+    "📦 La esencia fue guardada en tu inventario.\n\n" +
+    "⛏️━━━━━━━━━━━━━━━━━━⛏️"
+  );
+}
+
+// =====================================
 // AYUDA
 // =====================================
 
@@ -536,6 +589,12 @@ function mostrarAyuda() {
 &saldo
 &inventario
 &zona de caza
+
+⛏️ MINA DE ESENCIAS
+&minar
+
+3 intentos cada 5 minutos.
+70% normal, 25% épica y 5% legendaria.
 
 💎 ECONOMÍA
 &banco
@@ -846,8 +905,7 @@ function construirInformeBatalla(
     `📊 Nivel: ${enemigo.nivel}\n`;
 
   if (enemigo.esBoss) {
-    mensaje +=
-      `👁️ Apariencia: ${enemigo.apariencia}\n`;
+    mensaje += `👁️ Apariencia: ${enemigo.apariencia}\n`;
   }
 
   mensaje += "\n📜 DESARROLLO DE LA BATALLA\n\n";
@@ -953,12 +1011,10 @@ async function procesarComando(
   const comando = partes[0].toLowerCase();
   const argumentos = partes.slice(1);
 
-  // AYUDA DISPONIBLE PARA TODOS
   if (comando === "&ayuda") {
     return mostrarAyuda();
   }
 
-  // CARGAR PERFIL
   const perfil = await cargarPerfil(userId, username);
 
   // =====================================
@@ -1013,6 +1069,14 @@ async function procesarComando(
     await guardarPerfil(perfil);
 
     return resultado.mensaje;
+  }
+
+  // =====================================
+  // MINA DE ESENCIAS
+  // =====================================
+
+  if (comando === "&minar") {
+    return await ejecutarMineria(perfil);
   }
 
   // =====================================

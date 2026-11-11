@@ -228,6 +228,7 @@ function finalizarCombate(perfil, combate) {
 
   perfil.estadisticas.vida = combate.jugador.vida;
 
+  // VICTORIA
   if (combate.resultado === "victoria") {
     perfil.estadisticas.victorias =
       (perfil.estadisticas.victorias || 0) + 1;
@@ -251,15 +252,44 @@ function finalizarCombate(perfil, combate) {
     };
   }
 
+  // DERROTA
   perfil.estadisticas.derrotas =
     (perfil.estadisticas.derrotas || 0) + 1;
 
   perfil.estadisticas.combatesPerdidos =
     (perfil.estadisticas.combatesPerdidos || 0) + 1;
 
+  // Penalización del 5% de la experiencia actual
+  const experienciaAnterior = perfil.experiencia || 0;
+
+  const perdidaExperiencia = Math.ceil(
+    experienciaAnterior * 0.05
+  );
+
+  perfil.experiencia = Math.max(
+    0,
+    experienciaAnterior - perdidaExperiencia
+  );
+
+  // Bloquear regeneración durante 5 minutos
+  const ahora = Date.now();
+
+  perfil.regeneracion = perfil.regeneracion || {};
+
+  perfil.regeneracion.ultimaActualizacion = ahora;
+
+  perfil.regeneracion.bloqueadaHasta =
+    ahora + (5 * 60 * 1000);
+
   return {
     perfil,
-    resultado: "derrota"
+    resultado: "derrota",
+    experienciaAnterior,
+    perdidaExperiencia,
+    experienciaRestante: perfil.experiencia,
+    rubiesPerdidos: 0,
+    regeneracionBloqueada: true,
+    tiempoBloqueo: 5 * 60 * 1000
   };
 }
 

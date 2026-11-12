@@ -606,7 +606,6 @@ function mostrarAyuda() {
 
 ⛏️ MINA DE ESENCIAS
 &minar
-
 3 intentos cada 5 minutos.
 70% normal, 25% épica y 5% legendaria.
 
@@ -629,7 +628,6 @@ También podés indicar una cantidad:
 
 🌟 RENACIMIENTO
 &renacer
-
 Disponible al alcanzar el nivel 500.
 
 ⚔️ COMANDOS RPG
@@ -655,7 +653,6 @@ Los Bosses aparecen cada 50 niveles:
 &ranking rubies
 
 ━━━━━━━━━━━━━━━━━━
-
 Usá & antes de cada comando.`;
 }
 

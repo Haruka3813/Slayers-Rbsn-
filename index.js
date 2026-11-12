@@ -88,11 +88,11 @@ async function actualizarIconoBot() {
     const bytes = Buffer.from(await imagen.arrayBuffer());
 
     if (bytes.length === 0) {
-      throw new Error("La imagen descargada estÃ¡ vacÃ­a.");
+      throw new Error("La imagen descargada está vacía.");
     }
 
     if (bytes.length > 512 * 1024) {
-      throw new Error("La imagen supera el lÃ­mite de 512 KB de Anarchy.");
+      throw new Error("La imagen supera el límite de 512 KB de Anarchy.");
     }
 
     const respuesta = await fetch(
@@ -111,11 +111,11 @@ async function actualizarIconoBot() {
 
     if (!respuesta.ok) {
       throw new Error(
-        `Anarchy rechazÃ³ la imagen (${respuesta.status}): ${resultado}`
+        `Anarchy rechazó la imagen (${respuesta.status}): ${resultado}`
       );
     }
 
-    console.log("Â¡Imagen de perfil de Slayers-Rbsn actualizada!");
+    console.log("¡Imagen de perfil de Slayers-Rbsn actualizada!");
     console.log("Respuesta de Anarchy:", resultado);
 
   } catch (error) {
@@ -141,11 +141,11 @@ async function enviarMensaje(threadId, contenido) {
   }
 
   if (!threadId) {
-    throw new Error("No se recibiÃ³ el ID de la conversaciÃ³n.");
+    throw new Error("No se recibió el ID de la conversación.");
   }
 
   if (contenido === null || contenido === undefined) {
-    throw new Error("No se recibiÃ³ contenido para enviar.");
+    throw new Error("No se recibió contenido para enviar.");
   }
 
   const respuesta = await fetch(
@@ -239,19 +239,19 @@ function mostrarMenuElementos(perfil) {
   let disponibles = [];
 
   if (perfil.renacerPendiente) {
-    titulo = "ðŸŒŸ ELEGÃ TU ELEMENTO DE RENACIMIENTO";
+    titulo = "🌟 ELEGÍ TU ELEMENTO DE RENACIMIENTO";
 
   } else if (!perfil.elementos.primero) {
-    titulo = "âš”ï¸ REGISTRO DE AVENTURERO";
+    titulo = "⚔️ REGISTRO DE AVENTURERO";
 
   } else if (
     perfil.nivel >= 25 &&
     !perfil.elementos.segundo
   ) {
-    titulo = "âœ¨ DESBLOQUEASTE TU SEGUNDO ELEMENTO";
+    titulo = "✨ DESBLOQUEASTE TU SEGUNDO ELEMENTO";
 
   } else {
-    return "âŒ Ya tenÃ©s todos los elementos disponibles por ahora.";
+    return "❌ Ya tenés todos los elementos disponibles por ahora.";
   }
 
   const elementosElegidos = [
@@ -265,12 +265,12 @@ function mostrarMenuElementos(perfil) {
   );
 
   if (disponibles.length === 0) {
-    return "âŒ No quedan elementos disponibles para elegir.";
+    return "❌ No quedan elementos disponibles para elegir.";
   }
 
   let mensaje =
     `${titulo}\n\n` +
-    "ElegÃ­ un elemento de la siguiente lista:\n\n";
+    "Elegí un elemento de la siguiente lista:\n\n";
 
   disponibles.forEach(elemento => {
     mensaje +=
@@ -279,7 +279,7 @@ function mostrarMenuElementos(perfil) {
   });
 
   mensaje +=
-    "âš ï¸ Tu elecciÃ³n serÃ¡ permanente y no podrÃ¡s cambiarla.";
+    "⚠️ Tu elección será permanente y no podrás cambiarla.";
 
   return mensaje;
 }
@@ -297,7 +297,7 @@ async function registrarElemento(perfil, elementoId) {
 
   if (!elemento) {
     return (
-      "âŒ Ese elemento no existe.\n\n" +
+      "❌ Ese elemento no existe.\n\n" +
       mostrarMenuElementos(perfil)
     );
   }
@@ -309,7 +309,7 @@ async function registrarElemento(perfil, elementoId) {
   ].filter(Boolean);
 
   if (elementosElegidos.includes(elementoId)) {
-    return "âŒ Ya tenÃ©s ese elemento. ElegÃ­ uno diferente.";
+    return "❌ Ya tenés ese elemento. Elegí uno diferente.";
   }
 
   if (perfil.renacerPendiente) {
@@ -319,9 +319,9 @@ async function registrarElemento(perfil, elementoId) {
     await guardarPerfil(perfil);
 
     return (
-      `ðŸŒŸ Â¡ELEMENTO DE RENACIMIENTO DESBLOQUEADO!\n\n` +
+      `🌟 ¡ELEMENTO DE RENACIMIENTO DESBLOQUEADO!\n\n` +
       `${elemento.nombre}\n\n` +
-      `ðŸŒŸ Renacer: ${perfil.renacer}\n` +
+      `🌟 Renacer: ${perfil.renacer}\n` +
       "Este elemento es permanente."
     );
   }
@@ -332,11 +332,11 @@ async function registrarElemento(perfil, elementoId) {
     await guardarPerfil(perfil);
 
     return (
-      "âš”ï¸ Â¡REGISTRO COMPLETADO!\n\n" +
-      `ðŸ‘¤ Aventurero: ${perfil.nombre}\n` +
+      "⚔️ ¡REGISTRO COMPLETADO!\n\n" +
+      `👤 Aventurero: ${perfil.nombre}\n` +
       `${elemento.nombre}\n\n` +
       "Tu primer elemento es permanente.\n" +
-      "Â¡Bienvenido a Slayers Rbsn!"
+      "¡Bienvenido a Slayers Rbsn!"
     );
   }
 
@@ -349,13 +349,13 @@ async function registrarElemento(perfil, elementoId) {
     await guardarPerfil(perfil);
 
     return (
-      "âœ¨ Â¡SEGUNDO ELEMENTO DESBLOQUEADO!\n\n" +
+      "✨ ¡SEGUNDO ELEMENTO DESBLOQUEADO!\n\n" +
       `${elemento.nombre}\n\n` +
       "Tu segundo elemento es permanente."
     );
   }
 
-  return "âŒ No tenÃ©s ningÃºn elemento pendiente para elegir.";
+  return "❌ No tenés ningún elemento pendiente para elegir.";
 }
 
 // =====================================
@@ -366,11 +366,11 @@ function mostrarEconomia(perfil) {
   const datos = consultarSaldo(perfil);
 
   return (
-    "ðŸ’Ž ECONOMÃA DE SLAYERS ðŸ’Ž\n\n" +
-    `ðŸ’° RubÃ­es disponibles: ${datos.saldo}\n` +
-    `ðŸ¦ Banco: ${datos.banco}\n` +
-    `ðŸ”’ Reserva: ${datos.reserva}/${datos.limiteReserva} ðŸ’Ž\n\n` +
-    "â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”"
+    "💎 ECONOMÍA DE SLAYERS 💎\n\n" +
+    `💰 Rubíes disponibles: ${datos.saldo}\n` +
+    `🏦 Banco: ${datos.banco}\n` +
+    `🔒 Reserva: ${datos.reserva}/${datos.limiteReserva} 💎\n\n` +
+    "━━━━━━━━━━━━━━━━━━"
   );
 }
 
@@ -405,42 +405,42 @@ function textoEstadisticas(perfil) {
     Number(stats.combatesPerdidos) || derrotas;
 
   return (
-    "ðŸ“Šâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”ðŸ“Š\n" +
-    "       ESTADÃSTICAS DEL AVENTURERO\n" +
-    "ðŸ“Šâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”ðŸ“Š\n\n" +
+    "📊━━━━━━━━━━━━━━━━━━📊\n" +
+    "       ESTADÍSTICAS DEL AVENTURERO\n" +
+    "📊━━━━━━━━━━━━━━━━━━📊\n\n" +
 
-    `ðŸ§™ Jugador: ${perfil.nombre || "Jugador"}\n` +
-    `ðŸŒŸ Renacer: ${perfil.renacer || 0}\n` +
-    `â­ Nivel: ${nivel}/500\n` +
-    `âœ¨ Experiencia: ${experiencia} XP\n\n` +
+    `🧙 Jugador: ${perfil.nombre || "Jugador"}\n` +
+    `🌟 Renacer: ${perfil.renacer || 0}\n` +
+    `⭐ Nivel: ${nivel}/500\n` +
+    `✨ Experiencia: ${experiencia} XP\n\n` +
 
-    "â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n" +
-    "âš”ï¸ ATRIBUTOS DE COMBATE\n\n" +
+    "━━━━━━━━━━━━━━━━━━\n" +
+    "⚔️ ATRIBUTOS DE COMBATE\n\n" +
 
-    `â¤ï¸ Vida: ${vida}/${vidaMaxima}\n` +
-    `âš”ï¸ Ataque: ${ataque}\n` +
-    `ðŸ›¡ï¸ Defensa: ${defensa}\n\n` +
+    `❤️ Vida: ${vida}/${vidaMaxima}\n` +
+    `⚔️ Ataque: ${ataque}\n` +
+    `🛡️ Defensa: ${defensa}\n\n` +
 
-    "â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n" +
-    "ðŸ‘¹ ENEMIGOS DERROTADOS\n\n" +
+    "━━━━━━━━━━━━━━━━━━\n" +
+    "👹 ENEMIGOS DERROTADOS\n\n" +
 
-    `ðŸ‘¹ Monstruos: ${monstruos}\n` +
-    `ðŸ‰ Bosses: ${bosses}\n\n` +
+    `👹 Monstruos: ${monstruos}\n` +
+    `🐉 Bosses: ${bosses}\n\n` +
 
-    "â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n" +
-    "ðŸ† RESULTADOS DE COMBATE\n\n" +
+    "━━━━━━━━━━━━━━━━━━\n" +
+    "🏆 RESULTADOS DE COMBATE\n\n" +
 
-    `âœ… Victorias: ${victorias}\n` +
-    `âŒ Derrotas: ${derrotas}\n` +
-    `âš”ï¸ Combates ganados: ${combatesGanados}\n` +
-    `ðŸ’€ Combates perdidos: ${combatesPerdidos}\n\n` +
+    `✅ Victorias: ${victorias}\n` +
+    `❌ Derrotas: ${derrotas}\n` +
+    `⚔️ Combates ganados: ${combatesGanados}\n` +
+    `💀 Combates perdidos: ${combatesPerdidos}\n\n` +
 
-    "â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n" +
-    "ðŸ’Ž ECONOMÃA ACUMULADA\n\n" +
+    "━━━━━━━━━━━━━━━━━━\n" +
+    "💎 ECONOMÍA ACUMULADA\n\n" +
 
-    `ðŸ’° RubÃ­es obtenidos: ${rubies}\n\n` +
+    `💰 Rubíes obtenidos: ${rubies}\n\n` +
 
-    "ðŸ“Šâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”ðŸ“Š"
+    "📊━━━━━━━━━━━━━━━━━━📊"
   );
 }
 
@@ -562,26 +562,26 @@ async function ejecutarMineria(perfil) {
   );
 
   if (agregada && agregada.correcto === false) {
-    return "âŒ No se pudo guardar la esencia obtenida.";
+    return "❌ No se pudo guardar la esencia obtenida.";
   }
 
   await guardarPerfil(perfil);
 
   const nombres = {
-    normal: "âšª Esencia normal",
-    epica: "ðŸŸ£ Esencia Ã©pica",
-    legendaria: "ðŸŸ¡ Esencia legendaria"
+    normal: "⚪ Esencia normal",
+    epica: "🟣 Esencia épica",
+    legendaria: "🟡 Esencia legendaria"
   };
 
   return (
-    "â›ï¸â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â›ï¸\n" +
+    "⛏️━━━━━━━━━━━━━━━━━━⛏️\n" +
     "       MINA DE ESENCIAS\n" +
-    "â›ï¸â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â›ï¸\n\n" +
-    "ðŸŽ‰ Â¡Encontraste una esencia!\n\n" +
+    "⛏️━━━━━━━━━━━━━━━━━━⛏️\n\n" +
+    "🎉 ¡Encontraste una esencia!\n\n" +
     `${nombres[esencia]}\n\n` +
-    `ðŸ”‹ Intentos restantes: ${resultado.intentos}/3\n\n` +
-    "ðŸ“¦ La esencia fue guardada en tu inventario.\n\n" +
-    "â›ï¸â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â›ï¸"
+    `🔋 Intentos restantes: ${resultado.intentos}/3\n\n` +
+    "📦 La esencia fue guardada en tu inventario.\n\n" +
+    "⛏️━━━━━━━━━━━━━━━━━━⛏️"
   );
 }
 
@@ -590,13 +590,13 @@ async function ejecutarMineria(perfil) {
 // =====================================
 
 function mostrarAyuda() {
-  return `âš”ï¸ SLAYERS RBSN âš”ï¸
+  return `⚔️ SLAYERS RBSN ⚔️
 
-ðŸ“‹ REGISTRO
+📋 REGISTRO
 &registrar
 &registrar:elemento
 
-ðŸ“‹ COMANDOS BÃSICOS
+📋 COMANDOS BÁSICOS
 &ayuda
 &perfil
 &estadisticas
@@ -604,41 +604,41 @@ function mostrarAyuda() {
 &inventario
 &zona de caza
 
-â›ï¸ MINA DE ESENCIAS
+⛏️ MINA DE ESENCIAS
 &minar
 
 3 intentos cada 5 minutos.
-70% normal, 25% Ã©pica y 5% legendaria.
+70% normal, 25% épica y 5% legendaria.
 
-ðŸ’Ž ECONOMÃA
+💎 ECONOMÍA
 &banco
 &agregar:cantidad
 &retirar:cantidad
 
-ðŸ”’ RESERVA
+🔒 RESERVA
 &reserva:agregar:cantidad
 &reserva:retirar:cantidad
 
-âœ¨ COMANDOS DE ESENCIAS
+✨ COMANDOS DE ESENCIAS
 &usar:esencia:normal
 &usar:esencia:epica
 &usar:esencia:legendaria
 
-TambiÃ©n podÃ©s indicar una cantidad:
+También podés indicar una cantidad:
 &usar:esencia:normal:5
 
-ðŸŒŸ RENACIMIENTO
+🌟 RENACIMIENTO
 &renacer
 
 Disponible al alcanzar el nivel 500.
 
-âš”ï¸ COMANDOS RPG
+⚔️ COMANDOS RPG
 &cazar
 &enemigos
 &aventura <enemigo>
 &atacar
 
-ðŸ‘‘ COMANDOS DE BOSS
+👑 COMANDOS DE BOSS
 &boss
 &bosses
 &info boss nivel
@@ -648,15 +648,15 @@ Ejemplo: &info boss 50
 Los Bosses aparecen cada 50 niveles:
 50, 100, 150... hasta 500.
 
-ðŸ† RANKINGS
+🏆 RANKINGS
 &ranking
 &ranking nivel
 &ranking victorias
 &ranking rubies
 
-â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”
+━━━━━━━━━━━━━━━━━━
 
-UsÃ¡ & antes de cada comando.`;
+Usá & antes de cada comando.`;
 }
 
 // =====================================
@@ -670,11 +670,11 @@ function textoEnemigos() {
     return "No hay enemigos disponibles.";
   }
 
-  let texto = "âš”ï¸ ENEMIGOS DISPONIBLES âš”ï¸\n\n";
+  let texto = "⚔️ ENEMIGOS DISPONIBLES ⚔️\n\n";
 
   enemigos.forEach(enemigo => {
     texto +=
-      `â€¢ ${enemigo.nombre || enemigo.id}\n` +
+      `• ${enemigo.nombre || enemigo.id}\n` +
       `  ID: ${enemigo.id}\n` +
       `  Nivel: ${enemigo.nivel}\n` +
       `  Vida: ${enemigo.vida}\n\n`;
@@ -694,16 +694,16 @@ function textoBosses() {
     return "No hay Bosses disponibles.";
   }
 
-  let texto = "ðŸ‘‘ CATÃLOGO DE BOSSES ðŸ‘‘\n\n";
+  let texto = "👑 CATÁLOGO DE BOSSES 👑\n\n";
 
   bosses.forEach(boss => {
     texto +=
-      `ðŸ”¥ ${boss.nombre} â€” Nivel ${boss.nivel}\n`;
+      `🔥 ${boss.nombre} — Nivel ${boss.nivel}\n`;
   });
 
   texto +=
-    "\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n" +
-    "UsÃ¡ &info boss nivel para conocer sus estadÃ­sticas.";
+    "\n━━━━━━━━━━━━━━━━━━\n" +
+    "Usá &info boss nivel para conocer sus estadísticas.";
 
   return texto;
 }
@@ -717,30 +717,30 @@ function textoInfoBoss(nivel) {
 
   if (!boss) {
     return (
-      "âŒ No existe un Boss en ese nivel.\n\n" +
+      "❌ No existe un Boss en ese nivel.\n\n" +
       "Los Bosses aparecen cada 50 niveles:\n" +
       "50, 100, 150, 200... hasta 500.\n\n" +
-      "UsÃ¡ &bosses para ver el catÃ¡logo."
+      "Usá &bosses para ver el catálogo."
     );
   }
 
   return (
-    "ðŸ‘‘â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”ðŸ‘‘\n" +
-    "       INFORMACIÃ“N DEL BOSS\n" +
-    "ðŸ‘‘â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”ðŸ‘‘\n\n" +
-    `ðŸ”¥ Nombre: ${boss.nombre}\n` +
-    `ðŸ“Š Nivel: ${boss.nivel}\n` +
-    `ðŸ‘ï¸ Apariencia: ${boss.apariencia}\n\n` +
-    "â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n" +
-    "ðŸ“Š ESTADÃSTICAS\n\n" +
-    `â¤ï¸ Vida: ${boss.vida}\n` +
-    `âš”ï¸ Ataque: ${boss.ataque}\n` +
-    `ðŸ›¡ï¸ Defensa: ${boss.defensa}\n` +
-    `â­ Experiencia: ${boss.experiencia} XP\n\n` +
-    "â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n" +
-    "ðŸ’š RegeneraciÃ³n: 1.01 puntos cada 1.8 segundos.\n" +
-    "âš”ï¸ No tiene lÃ­mite de tiempo.\n\n" +
-    "ðŸ‘‘â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”ðŸ‘‘"
+    "👑━━━━━━━━━━━━━━━━━━👑\n" +
+    "       INFORMACIÓN DEL BOSS\n" +
+    "👑━━━━━━━━━━━━━━━━━━👑\n\n" +
+    `🔥 Nombre: ${boss.nombre}\n` +
+    `📊 Nivel: ${boss.nivel}\n` +
+    `👁️ Apariencia: ${boss.apariencia}\n\n` +
+    "━━━━━━━━━━━━━━━━━━\n" +
+    "📊 ESTADÍSTICAS\n\n" +
+    `❤️ Vida: ${boss.vida}\n` +
+    `⚔️ Ataque: ${boss.ataque}\n` +
+    `🛡️ Defensa: ${boss.defensa}\n` +
+    `⭐ Experiencia: ${boss.experiencia} XP\n\n` +
+    "━━━━━━━━━━━━━━━━━━\n" +
+    "💚 Regeneración: 1.01 puntos cada 1.8 segundos.\n" +
+    "⚔️ No tiene límite de tiempo.\n\n" +
+    "👑━━━━━━━━━━━━━━━━━━👑"
   );
 }
 
@@ -759,56 +759,57 @@ function textoZonaCaza(perfil) {
   const proximoBoss = obtenerProximoBoss(nivelJugador);
 
   let texto =
-    "ðŸŒ²â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”ðŸŒ²\n" +
+    "🌲━━━━━━━━━━━━━━━━━━🌲\n" +
     "        ZONA DE CAZA\n" +
-    "ðŸŒ²â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”ðŸŒ²\n\n";
+    "🌲━━━━━━━━━━━━━━━━━━🌲\n\n";
 
   texto +=
-    "ðŸ—ºï¸ Zona compartida de Slayers Rbsn\n" +
-    "âš”ï¸ Todos los aventureros pueden explorar esta zona.\n\n";
+    "🗺️ Zona compartida de Slayers Rbsn\n" +
+    "⚔️ Todos los aventureros pueden explorar esta zona.\n\n";
 
   texto +=
-    `ðŸ§™ Tu nivel: ${nivelJugador}\n\n` +
-    "â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n" +
-    "ðŸ‘¹ MONSTRUOS DE LA ZONA\n\n";
+    `🧙 Tu nivel: ${nivelJugador}\n\n` +
+    "━━━━━━━━━━━━━━━━━━\n" +
+    "👹 MONSTRUOS DE LA ZONA\n\n";
 
   if (!enemigos || enemigos.length === 0) {
     texto += "No hay monstruos disponibles actualmente.\n";
   } else {
     enemigos.forEach(enemigo => {
       texto +=
-        `ðŸ‘¹ ${enemigo.nombre || enemigo.id}\n` +
+        `👹 ${enemigo.nombre || enemigo.id}\n` +
         `   ID: ${enemigo.id}\n` +
         `   Nivel base: ${enemigo.nivel}\n` +
-        `   â¤ï¸ Vida base: ${enemigo.vida}\n` +
-        `   âš”ï¸ Ataque base: ${enemigo.ataque}\n` +
-        `   ðŸ›¡ï¸ Defensa base: ${enemigo.defensa}\n\n`;
+        `   ❤️ Vida base: ${enemigo.vida}\n` +
+        `   ⚔️ Ataque base: ${enemigo.ataque}\n` +
+        `   🛡️ Defensa base: ${enemigo.defensa}\n\n`;
     });
   }
 
   texto +=
-    "â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n" +
-    "ðŸ“ˆ ADAPTACIÃ“N DE MONSTRUOS\n\n" +
-    "Los monstruos aumentan sus estadÃ­sticas segÃºn tu nivel.\n" +
-    "Sus recompensas tambiÃ©n crecen con tu progreso.\n\n" +
-    "â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n" +
-    "ðŸ‘‘ PRÃ“XIMO BOSS\n\n";
+    "━━━━━━━━━━━━━━━━━━\n" +
+    "📈 ADAPTACIÓN DE MONSTRUOS\n\n" +
+    "Los monstruos aumentan sus estadísticas según tu nivel.\n" +
+    "Sus recompensas también crecen con tu progreso.\n\n" +
+    "━━━━━━━━━━━━━━━━━━\n" +
+    "👑 PRÓXIMO BOSS\n\n";
 
   if (proximoBoss) {
     texto +=
-      `ðŸ”¥ ${proximoBoss.nombre}\n` +
-      `ðŸ“Š Nivel: ${proximoBoss.nivel}\n` +
-      `ðŸ‘ï¸ Apariencia: ${proximoBoss.apariencia}\n` +
-      "â¤ï¸ Los Bosses regeneran vida durante el combate.\n" +
-      "ðŸŽ Entregan recompensas especiales.\n\n";
+      `🔥 ${proximoBoss.nombre}\n` +
+      `📊 Nivel: ${proximoBoss.nivel}\n` +
+      `👁️ Apariencia: ${proximoBoss.apariencia}\n` +
+      "❤️ Los Bosses regeneran vida durante el combate.\n" +
+      "🎁 Entregan recompensas especiales.\n\n";
   }
 
   texto +=
-    "ðŸŒ²â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”ðŸŒ²\n" +
-    "UsÃ¡ &cazar para iniciar una batalla automÃ¡tica.";
+    "🌲━━━━━━━━━━━━━━━━━━🌲\n" +
+    "Usá &cazar para iniciar una batalla automática.";
 
   return texto;
 }
+
 // =====================================
 // EJECUTAR BATALLA AUTOMÁTICA
 // =====================================
@@ -840,12 +841,12 @@ async function ejecutarBatalla(perfil, combate) {
     vidaRegeneradaBoss += ataque.regeneracion || 0;
 
     registro.push(
-      `ðŸ—¡ï¸ ${ataquesJugador}. Atacaste e hiciste ${ataque.dano} de daÃ±o.`
+      `🗡️ ${ataquesJugador}. Atacaste e hiciste ${ataque.dano} de daño.`
     );
 
     if (ataque.regeneracion > 0) {
       registro.push(
-        `ðŸ‘‘ El Boss regenerÃ³ ${ataque.regeneracion} puntos de vida.`
+        `👑 El Boss regeneró ${ataque.regeneracion} puntos de vida.`
       );
     }
 
@@ -870,12 +871,12 @@ async function ejecutarBatalla(perfil, combate) {
     vidaRegeneradaBoss += contraataque.regeneracion || 0;
 
     registro.push(
-      `ðŸ‘¹ El enemigo te atacÃ³ e hizo ${contraataque.dano} de daÃ±o.`
+      `👹 El enemigo te atacó e hizo ${contraataque.dano} de daño.`
     );
 
     if (contraataque.regeneracion > 0) {
       registro.push(
-        `ðŸ‘‘ El Boss regenerÃ³ ${contraataque.regeneracion} puntos de vida.`
+        `👑 El Boss regeneró ${contraataque.regeneracion} puntos de vida.`
       );
     }
 
@@ -911,43 +912,43 @@ function construirInformeBatalla(
   final
 ) {
   let mensaje =
-    "âš”ï¸â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”âš”ï¸\n" +
+    "⚔️━━━━━━━━━━━━━━━━━━⚔️\n" +
     "       INFORME DE BATALLA\n" +
-    "âš”ï¸â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”âš”ï¸\n\n";
+    "⚔️━━━━━━━━━━━━━━━━━━⚔️\n\n";
 
   mensaje +=
-    `${enemigo.esBoss ? "ðŸ‘‘ BOSS: " : "ðŸ‘¹ Enemigo: "}${enemigo.nombre}\n` +
-    `ðŸ“Š Nivel: ${enemigo.nivel}\n`;
+    `${enemigo.esBoss ? "👑 BOSS: " : "👹 Enemigo: "}${enemigo.nombre}\n` +
+    `📊 Nivel: ${enemigo.nivel}\n`;
 
   if (enemigo.esBoss) {
-    mensaje += `ðŸ‘ï¸ Apariencia: ${enemigo.apariencia}\n`;
+    mensaje += `👁️ Apariencia: ${enemigo.apariencia}\n`;
   }
 
-  mensaje += "\nðŸ“œ DESARROLLO DE LA BATALLA\n\n";
+  mensaje += "\n📜 DESARROLLO DE LA BATALLA\n\n";
 
   batalla.registro.forEach(linea => {
     mensaje += linea + "\n";
   });
 
   mensaje +=
-    "\nâ”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n" +
-    "ðŸ“Š ESTADÃSTICAS DE BATALLA\n\n" +
-    `ðŸ”„ Rondas: ${batalla.rondas}\n` +
-    `ðŸ—¡ï¸ Tus ataques: ${batalla.ataquesJugador}\n` +
-    `ðŸ‘¹ Ataques enemigos: ${batalla.ataquesEnemigo}\n` +
-    `ðŸ’¥ DaÃ±o causado: ${batalla.danoCausado}\n` +
-    `ðŸ’” DaÃ±o recibido: ${batalla.danoRecibido}\n`;
+    "\n━━━━━━━━━━━━━━━━━━\n" +
+    "📊 ESTADÍSTICAS DE BATALLA\n\n" +
+    `🔄 Rondas: ${batalla.rondas}\n` +
+    `🗡️ Tus ataques: ${batalla.ataquesJugador}\n` +
+    `👹 Ataques enemigos: ${batalla.ataquesEnemigo}\n` +
+    `💥 Daño causado: ${batalla.danoCausado}\n` +
+    `💔 Daño recibido: ${batalla.danoRecibido}\n`;
 
   if (enemigo.esBoss) {
     mensaje +=
-      `ðŸ’š Vida regenerada por el Boss: ${batalla.vidaRegeneradaBoss}\n`;
+      `💚 Vida regenerada por el Boss: ${batalla.vidaRegeneradaBoss}\n`;
   }
 
   mensaje +=
-    `\nâ¤ï¸ Tu vida final: ${perfil.estadisticas.vida}/${perfil.estadisticas.vidaMaxima}\n` +
-    `ðŸ‘¹ Vida final del enemigo: ${batalla.combate.enemigo.vida}/${batalla.combate.enemigo.vidaMaxima}\n\n`;
+    `\n❤️ Tu vida final: ${perfil.estadisticas.vida}/${perfil.estadisticas.vidaMaxima}\n` +
+    `👹 Vida final del enemigo: ${batalla.combate.enemigo.vida}/${batalla.combate.enemigo.vidaMaxima}\n\n`;
 
-  mensaje += "â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”\n";
+  mensaje += "━━━━━━━━━━━━━━━━━━\n";
 
   if (final.resultado === "victoria") {
     const rubies = calcularRubies(
@@ -966,48 +967,48 @@ function construirInformeBatalla(
 
     const botin = calcularBotin(enemigo);
 
-    let mensajeBotin = "ðŸŽ BotÃ­n: No encontraste objetos.";
+    let mensajeBotin = "🎁 Botín: No encontraste objetos.";
 
     if (botin) {
       agregarEsencia(perfil, botin, 1);
 
       const nombres = {
-        normal: "Esencia normal âšª",
-        epica: "Esencia Ã©pica ðŸŸ£",
-        legendaria: "Esencia legendaria ðŸŸ¡"
+        normal: "Esencia normal ⚪",
+        epica: "Esencia épica 🟣",
+        legendaria: "Esencia legendaria 🟡"
       };
 
       mensajeBotin =
-        `ðŸŽ BotÃ­n obtenido: ${nombres[botin]}`;
+        `🎁 Botín obtenido: ${nombres[botin]}`;
     }
 
     mensaje +=
-      `${enemigo.esBoss ? "ðŸ‘‘ Â¡BOSS DERROTADO!\n\n" : "ðŸ† Â¡VICTORIA!\n\n"}` +
-      `â­ Experiencia: +${final.experiencia || 0} XP\n` +
-      `ðŸ’Ž RubÃ­es obtenidos: +${rubies}\n` +
+      `${enemigo.esBoss ? "👑 ¡BOSS DERROTADO!\n\n" : "🏆 ¡VICTORIA!\n\n"}` +
+      `⭐ Experiencia: +${final.experiencia || 0} XP\n` +
+      `💎 Rubíes obtenidos: +${rubies}\n` +
       `${mensajeBotin}\n\n`;
 
     if (enemigo.esBoss) {
-      mensaje += "ðŸ† Boss registrado en tus estadÃ­sticas.\n\n";
+      mensaje += "🏆 Boss registrado en tus estadísticas.\n\n";
     }
 
     if (final.subioNivel) {
-      mensaje += "â¬†ï¸ Â¡SUBISTE DE NIVEL!\n\n";
+      mensaje += "⬆️ ¡SUBISTE DE NIVEL!\n\n";
     }
 
     mensaje +=
-      `ðŸ’° Total de rubÃ­es: ${perfil.rubies}\n`;
+      `💰 Total de rubíes: ${perfil.rubies}\n`;
 
   } else {
     mensaje +=
-      "ðŸ’€ Â¡HAS SIDO DERROTADO!\n\n" +
-      `ðŸ“‰ Experiencia perdida: ${final.perdidaExperiencia || 0} XP\n` +
-      `â­ Experiencia restante: ${final.experienciaRestante || 0} XP\n` +
-      "ðŸ’Ž RubÃ­es perdidos: 0\n" +
-      "â³ RegeneraciÃ³n bloqueada: 5 minutos\n";
+      "💀 ¡HAS SIDO DERROTADO!\n\n" +
+      `📉 Experiencia perdida: ${final.perdidaExperiencia || 0} XP\n` +
+      `⭐ Experiencia restante: ${final.experienciaRestante || 0} XP\n` +
+      "💎 Rubíes perdidos: 0\n" +
+      "⏳ Regeneración bloqueada: 5 minutos\n";
   }
 
-  mensaje += "\nâš”ï¸â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”âš”ï¸";
+  mensaje += "\n⚔️━━━━━━━━━━━━━━━━━━⚔️";
 
   return mensaje;
 }
@@ -1044,7 +1045,7 @@ async function procesarComando(
     const datos = comando.split(":");
 
     if (datos.length !== 2 || !datos[1]) {
-      return "âŒ Formato incorrecto. UsÃ¡ &registrar:elemento";
+      return "❌ Formato incorrecto. Usá &registrar:elemento";
     }
 
     if (
@@ -1052,7 +1053,7 @@ async function procesarComando(
       !perfil.renacerPendiente &&
       !(perfil.nivel >= 25 && !perfil.elementos.segundo)
     ) {
-      return "âŒ Ya estÃ¡s registrado. No puedes volver a registrarte ni cambiar tu elemento.";
+      return "❌ Ya estás registrado. No puedes volver a registrarte ni cambiar tu elemento.";
     }
 
     return registrarElemento(perfil, datos[1]);
@@ -1064,8 +1065,8 @@ async function procesarComando(
 
   if (!estaRegistrado(perfil)) {
     return (
-      "âŒ TodavÃ­a no estÃ¡s registrado.\n\n" +
-      "Primero elegÃ­ tu elemento permanente con:\n" +
+      "❌ Todavía no estás registrado.\n\n" +
+      "Primero elegí tu elemento permanente con:\n" +
       "&registrar"
     );
   }
@@ -1141,28 +1142,28 @@ async function procesarComando(
     const datos = comando.split(":");
 
     if (datos.length !== 2) {
-      return "âŒ Formato incorrecto. UsÃ¡ &agregar:cantidad";
+      return "❌ Formato incorrecto. Usá &agregar:cantidad";
     }
 
     const cantidad = validarCantidad(datos[1]);
 
     if (cantidad === null) {
-      return "âŒ IngresÃ¡ una cantidad vÃ¡lida de rubÃ­es.";
+      return "❌ Ingresá una cantidad válida de rubíes.";
     }
 
     const resultado = agregarBanco(perfil, cantidad);
 
     if (!resultado.correcto) {
-      return `âŒ ${resultado.mensaje}`;
+      return `❌ ${resultado.mensaje}`;
     }
 
     await guardarPerfil(perfil);
 
     return (
-      `ðŸ¦ DEPÃ“SITO REALIZADO\n\n` +
+      `🏦 DEPÓSITO REALIZADO\n\n` +
       `${resultado.mensaje}\n\n` +
-      `ðŸ’° RubÃ­es disponibles: ${resultado.saldo}\n` +
-      `ðŸ¦ Banco: ${resultado.banco}`
+      `💰 Rubíes disponibles: ${resultado.saldo}\n` +
+      `🏦 Banco: ${resultado.banco}`
     );
   }
 
@@ -1174,28 +1175,28 @@ async function procesarComando(
     const datos = comando.split(":");
 
     if (datos.length !== 2) {
-      return "âŒ Formato incorrecto. UsÃ¡ &retirar:cantidad";
+      return "❌ Formato incorrecto. Usá &retirar:cantidad";
     }
 
     const cantidad = validarCantidad(datos[1]);
 
     if (cantidad === null) {
-      return "âŒ IngresÃ¡ una cantidad vÃ¡lida de rubÃ­es.";
+      return "❌ Ingresá una cantidad válida de rubíes.";
     }
 
     const resultado = retirarBanco(perfil, cantidad);
 
     if (!resultado.correcto) {
-      return `âŒ ${resultado.mensaje}`;
+      return `❌ ${resultado.mensaje}`;
     }
 
     await guardarPerfil(perfil);
 
     return (
-      `ðŸ¦ RETIRO REALIZADO\n\n` +
+      `🏦 RETIRO REALIZADO\n\n` +
       `${resultado.mensaje}\n\n` +
-      `ðŸ’° RubÃ­es disponibles: ${resultado.saldo}\n` +
-      `ðŸ¦ Banco: ${resultado.banco}`
+      `💰 Rubíes disponibles: ${resultado.saldo}\n` +
+      `🏦 Banco: ${resultado.banco}`
     );
   }
 
@@ -1211,8 +1212,8 @@ async function procesarComando(
       !["agregar", "retirar"].includes(datos[1])
     ) {
       return (
-        "âŒ Formato incorrecto.\n\n" +
-        "UsÃ¡:\n" +
+        "❌ Formato incorrecto.\n\n" +
+        "Usá:\n" +
         "&reserva:agregar:cantidad\n" +
         "&reserva:retirar:cantidad"
       );
@@ -1221,7 +1222,7 @@ async function procesarComando(
     const cantidad = validarCantidad(datos[2]);
 
     if (cantidad === null) {
-      return "âŒ IngresÃ¡ una cantidad vÃ¡lida de rubÃ­es.";
+      return "❌ Ingresá una cantidad válida de rubíes.";
     }
 
     let resultado;
@@ -1233,7 +1234,7 @@ async function procesarComando(
     }
 
     if (!resultado.correcto) {
-      return `âŒ ${resultado.mensaje}`;
+      return `❌ ${resultado.mensaje}`;
     }
 
     await guardarPerfil(perfil);
@@ -1241,10 +1242,10 @@ async function procesarComando(
     const datosEconomia = consultarSaldo(perfil);
 
     return (
-      `ðŸ”’ RESERVA ACTUALIZADA\n\n` +
+      `🔒 RESERVA ACTUALIZADA\n\n` +
       `${resultado.mensaje}\n\n` +
-      `ðŸ’° RubÃ­es disponibles: ${datosEconomia.saldo}\n` +
-      `ðŸ”’ Reserva: ${datosEconomia.reserva}/${datosEconomia.limiteReserva} ðŸ’Ž`
+      `💰 Rubíes disponibles: ${datosEconomia.saldo}\n` +
+      `🔒 Reserva: ${datosEconomia.reserva}/${datosEconomia.limiteReserva} 💎`
     );
   }
 
@@ -1261,8 +1262,8 @@ async function procesarComando(
       datos[1] !== "esencia"
     ) {
       return (
-        "âŒ Formato incorrecto.\n\n" +
-        "UsÃ¡:\n" +
+        "❌ Formato incorrecto.\n\n" +
+        "Usá:\n" +
         "&usar:esencia:normal\n" +
         "&usar:esencia:epica\n" +
         "&usar:esencia:legendaria\n" +
@@ -1283,7 +1284,7 @@ async function procesarComando(
     );
 
     if (!resultado.correcto) {
-      return `âŒ ${resultado.mensaje}`;
+      return `❌ ${resultado.mensaje}`;
     }
 
     await guardarPerfil(perfil);
@@ -1297,7 +1298,7 @@ async function procesarComando(
 
   if (comando === "&cazar") {
     if (combatesActivos.has(userId)) {
-      return "Ya tenÃ©s un combate activo. UsÃ¡ &atacar.";
+      return "Ya tenés un combate activo. Usá &atacar.";
     }
 
     const enemigos = listarEnemigos();
@@ -1332,7 +1333,7 @@ async function procesarComando(
     );
 
     if (!batalla.combate.terminado) {
-      return "âš ï¸ No se pudo completar la cacerÃ­a. IntentÃ¡ nuevamente.";
+      return "⚠️ No se pudo completar la cacería. Intentá nuevamente.";
     }
 
     const final = finalizarCombate(
@@ -1382,8 +1383,8 @@ async function procesarComando(
       argumentos[0].toLowerCase() !== "boss"
     ) {
       return (
-        "âŒ Formato incorrecto.\n\n" +
-        "UsÃ¡: &info boss nivel\n" +
+        "❌ Formato incorrecto.\n\n" +
+        "Usá: &info boss nivel\n" +
         "Ejemplo: &info boss 50"
       );
     }
@@ -1391,7 +1392,7 @@ async function procesarComando(
     const nivel = Number(argumentos[1]);
 
     if (!Number.isSafeInteger(nivel)) {
-      return "âŒ El nivel debe ser un nÃºmero entero vÃ¡lido.";
+      return "❌ El nivel debe ser un número entero válido.";
     }
 
     return textoInfoBoss(nivel);
@@ -1403,7 +1404,7 @@ async function procesarComando(
 
   if (comando === "&boss") {
     if (combatesActivos.has(userId)) {
-      return "Ya tenÃ©s un combate activo. UsÃ¡ &atacar.";
+      return "Ya tenés un combate activo. Usá &atacar.";
     }
 
     const resultado = iniciarCombateBoss(perfil);
@@ -1422,17 +1423,17 @@ async function procesarComando(
     });
 
     return (
-      "ðŸ‘‘â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”ðŸ‘‘\n" +
-      "       Â¡DESAFÃO DE BOSS!\n" +
-      "ðŸ‘‘â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”ðŸ‘‘\n\n" +
-      `ðŸ”¥ ${resultado.enemigo.nombre}\n` +
-      `ðŸ“Š Nivel: ${resultado.enemigo.nivel}\n` +
-      `ðŸ‘ï¸ Apariencia: ${resultado.enemigo.apariencia}\n\n` +
-      `â¤ï¸ Vida del Boss: ${resultado.enemigo.vida}/${resultado.enemigo.vidaMaxima}\n` +
-      `â¤ï¸ Tu vida: ${resultado.jugador.vida}/${resultado.jugador.vidaMaxima}\n\n` +
-      "ðŸ’š El Boss regenera vida cada 1,8 segundos.\n" +
-      "âš”ï¸ No tiene lÃ­mite de tiempo.\n\n" +
-      "UsÃ¡ &atacar para comenzar la batalla."
+      "👑━━━━━━━━━━━━━━━━━━👑\n" +
+      "       ¡DESAFÍO DE BOSS!\n" +
+      "👑━━━━━━━━━━━━━━━━━━👑\n\n" +
+      `🔥 ${resultado.enemigo.nombre}\n` +
+      `📊 Nivel: ${resultado.enemigo.nivel}\n` +
+      `👁️ Apariencia: ${resultado.enemigo.apariencia}\n\n` +
+      `❤️ Vida del Boss: ${resultado.enemigo.vida}/${resultado.enemigo.vidaMaxima}\n` +
+      `❤️ Tu vida: ${resultado.jugador.vida}/${resultado.jugador.vidaMaxima}\n\n` +
+      "💚 El Boss regenera vida cada 1,8 segundos.\n" +
+      "⚔️ No tiene límite de tiempo.\n\n" +
+      "Usá &atacar para comenzar la batalla."
     );
   }
 
@@ -1446,7 +1447,7 @@ async function procesarComando(
     }
 
     if (combatesActivos.has(userId)) {
-      return "Ya tenÃ©s un combate activo. UsÃ¡ &atacar.";
+      return "Ya tenés un combate activo. Usá &atacar.";
     }
 
     const resultado = iniciarCombate(
@@ -1468,11 +1469,11 @@ async function procesarComando(
     });
 
     return (
-      `âš”ï¸ Â¡COMIENZA EL COMBATE!\n\n` +
-      `ðŸ‘¹ Enemigo: ${resultado.enemigo.nombre || resultado.enemigo.id}\n` +
-      `â¤ï¸ Vida del enemigo: ${resultado.enemigo.vida}/${resultado.enemigo.vidaMaxima}\n` +
-      `â¤ï¸ Tu vida: ${resultado.jugador.vida}/${resultado.jugador.vidaMaxima}\n\n` +
-      "UsÃ¡ &atacar para ejecutar toda la batalla."
+      `⚔️ ¡COMIENZA EL COMBATE!\n\n` +
+      `👹 Enemigo: ${resultado.enemigo.nombre || resultado.enemigo.id}\n` +
+      `❤️ Vida del enemigo: ${resultado.enemigo.vida}/${resultado.enemigo.vidaMaxima}\n` +
+      `❤️ Tu vida: ${resultado.jugador.vida}/${resultado.jugador.vidaMaxima}\n\n` +
+      "Usá &atacar para ejecutar toda la batalla."
     );
   }
 
@@ -1484,7 +1485,7 @@ async function procesarComando(
     const activo = combatesActivos.get(userId);
 
     if (!activo) {
-      return "No tenÃ©s ningÃºn combate activo. UsÃ¡ &aventura o &boss.";
+      return "No tenés ningún combate activo. Usá &aventura o &boss.";
     }
 
     actualizarRegeneracion(activo.perfil, true);
@@ -1493,7 +1494,7 @@ async function procesarComando(
 
     if (combate.terminado) {
       combatesActivos.delete(userId);
-      return "Ese combate ya terminÃ³.";
+      return "Ese combate ya terminó.";
     }
 
     const enemigo = {
@@ -1508,7 +1509,7 @@ async function procesarComando(
     activo.combate = batalla.combate;
 
     if (!batalla.combate.terminado) {
-      return "âš ï¸ No se pudo completar la batalla. IntentÃ¡ nuevamente.";
+      return "⚠️ No se pudo completar la batalla. Intentá nuevamente.";
     }
 
     const final = finalizarCombate(
@@ -1556,7 +1557,7 @@ async function procesarComando(
     } else if (tipo === "rubies") {
       ranking = rankingPorRubies(perfiles);
     } else {
-      return "Tipo de ranking invÃ¡lido. UsÃ¡: nivel, victorias o rubies.";
+      return "Tipo de ranking inválido. Usá: nivel, victorias o rubies.";
     }
 
     return mostrarRanking(ranking, tipo);
@@ -1639,7 +1640,7 @@ app.post("/webhook", (req, res) => {
       try {
         await enviarMensaje(
           threadId,
-          "âš ï¸ OcurriÃ³ un error al ejecutar el comando. IntentÃ¡ nuevamente."
+          "⚠️ Ocurrió un error al ejecutar el comando. Intentá nuevamente."
         );
       } catch (errorEnvio) {
         console.error("Error enviando respuesta:", errorEnvio);
@@ -1654,7 +1655,7 @@ app.post("/webhook", (req, res) => {
 app.get("/", (req, res) => {
   res.json({
     bot: "Slayers Rbsn",
-    estado: "En lÃ­nea",
+    estado: "En línea",
     tokenConfigurado: Boolean(BOT_TOKEN),
     supabaseConfigurado: comprobarConexion()
   });

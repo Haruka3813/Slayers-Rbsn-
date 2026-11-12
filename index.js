@@ -24,7 +24,9 @@ const {
 const {
   mostrarInventario,
   usarEsencia,
-  agregarEsencia
+  agregarEsencia,
+  agregarMaterial,
+  mostrarMateriales
 } = require("./systems/inventario");
 
 const {
@@ -36,7 +38,8 @@ const {
   iniciarCombateBoss,
   atacarEnemigo,
   atacarJugador,
-  finalizarCombate
+  finalizarCombate,
+  obtenerBotinMateriales
 } = require("./systems/rpg");
 
 const {
@@ -47,11 +50,26 @@ const {
 } = require("./systems/ranking");
 
 const {
+  mostrarHerreria,
+  listarEquipamiento,
+  buscarEquipo,
+  consultarReceta,
+  fabricarEquipo,
+  equiparEquipo,
+  desequiparEquipo,
+  obtenerEspadaMate
+} = require("./systems/herreria");
+
+const {
   comprobarConexion,
   guardarPerfil,
   obtenerPerfil,
   obtenerTodosLosPerfiles
 } = require("./database/supabase");
+
+// =====================================
+// CONFIGURACIÓN
+// =====================================
 
 const app = express();
 
@@ -236,20 +254,16 @@ function mostrarMenuElementos(perfil) {
   normalizarPerfil(perfil);
 
   let titulo = "";
-  let disponibles = [];
 
   if (perfil.renacerPendiente) {
     titulo = "🌟 ELEGÍ TU ELEMENTO DE RENACIMIENTO";
-
   } else if (!perfil.elementos.primero) {
     titulo = "⚔️ REGISTRO DE AVENTURERO";
-
   } else if (
     perfil.nivel >= 25 &&
     !perfil.elementos.segundo
   ) {
     titulo = "✨ DESBLOQUEASTE TU SEGUNDO ELEMENTO";
-
   } else {
     return "❌ Ya tenés todos los elementos disponibles por ahora.";
   }
@@ -260,7 +274,7 @@ function mostrarMenuElementos(perfil) {
     ...(perfil.elementos.adicionales || [])
   ].filter(Boolean);
 
-  disponibles = ELEMENTOS_DISPONIBLES.filter(
+  const disponibles = ELEMENTOS_DISPONIBLES.filter(
     elemento => !elementosElegidos.includes(elemento.id)
   );
 
@@ -370,7 +384,7 @@ function mostrarEconomia(perfil) {
     `💰 Rubíes disponibles: ${datos.saldo}\n` +
     `🏦 Banco: ${datos.banco}\n` +
     `🔒 Reserva: ${datos.reserva}/${datos.limiteReserva} 💎\n\n` +
-    "━━━━━━━━━━━━━━━━━━"
+    "━━━━━━━━━━━━━━━━━━━━"
   );
 }
 
@@ -405,29 +419,29 @@ function textoEstadisticas(perfil) {
     Number(stats.combatesPerdidos) || derrotas;
 
   return (
-    "📊━━━━━━━━━━━━━━━━━━📊\n" +
+    "📊━━━━━━━━━━━━━━━━━━━━📊\n" +
     "       ESTADÍSTICAS DEL AVENTURERO\n" +
-    "📊━━━━━━━━━━━━━━━━━━📊\n\n" +
+    "📊━━━━━━━━━━━━━━━━━━━━📊\n\n" +
 
     `🧙 Jugador: ${perfil.nombre || "Jugador"}\n` +
     `🌟 Renacer: ${perfil.renacer || 0}\n` +
     `⭐ Nivel: ${nivel}/500\n` +
     `✨ Experiencia: ${experiencia} XP\n\n` +
 
-    "━━━━━━━━━━━━━━━━━━\n" +
+    "━━━━━━━━━━━━━━━━━━━━\n" +
     "⚔️ ATRIBUTOS DE COMBATE\n\n" +
 
     `❤️ Vida: ${vida}/${vidaMaxima}\n` +
     `⚔️ Ataque: ${ataque}\n` +
     `🛡️ Defensa: ${defensa}\n\n` +
 
-    "━━━━━━━━━━━━━━━━━━\n" +
+    "━━━━━━━━━━━━━━━━━━━━\n" +
     "👹 ENEMIGOS DERROTADOS\n\n" +
 
     `👹 Monstruos: ${monstruos}\n` +
     `🐉 Bosses: ${bosses}\n\n` +
 
-    "━━━━━━━━━━━━━━━━━━\n" +
+    "━━━━━━━━━━━━━━━━━━━━\n" +
     "🏆 RESULTADOS DE COMBATE\n\n" +
 
     `✅ Victorias: ${victorias}\n` +
@@ -435,12 +449,12 @@ function textoEstadisticas(perfil) {
     `⚔️ Combates ganados: ${combatesGanados}\n` +
     `💀 Combates perdidos: ${combatesPerdidos}\n\n` +
 
-    "━━━━━━━━━━━━━━━━━━\n" +
+    "━━━━━━━━━━━━━━━━━━━━\n" +
     "💎 ECONOMÍA ACUMULADA\n\n" +
 
     `💰 Rubíes obtenidos: ${rubies}\n\n` +
 
-    "📊━━━━━━━━━━━━━━━━━━📊"
+    "📊━━━━━━━━━━━━━━━━━━━━📊"
   );
 }
 
@@ -492,7 +506,7 @@ function calcularRubies(enemigo, nivelJugador) {
 }
 
 // =====================================
-// BOTÍN ALEATORIO
+// BOTÍN DE ESENCIAS
 // =====================================
 
 function calcularBotin(enemigo) {
@@ -528,7 +542,7 @@ function calcularBotin(enemigo) {
 }
 
 // =====================================
-// MINA DE ESENCIAS
+// MINERÍA
 // =====================================
 
 function obtenerEsenciaMina() {
@@ -545,27 +559,91 @@ function obtenerEsenciaMina() {
   return "legendaria";
 }
 
-async function ejecutarMineria(perfil) {
-  const resultado = consumirIntentoMina(perfil);
+function obtenerMineralMina(nivel) {
+  const materiales = [];
 
-  if (!resultado.correcto) {
-    await guardarPerfil(perfil);
-    return resultado.mensaje;
+  if (nivel >= 1) {
+    materiales.push("mineral_hierro");
   }
 
-  const esencia = obtenerEsenciaMina();
+  if (nivel >= 25) {
+    materiales.push("mineral_plata");
+  }
 
-  const agregada = agregarEsencia(
-    perfil,
-    esencia,
-    1
-  );
+  if (nivel >= 75) {
+    materiales.push("mineral_oro");
+  }
 
-  if (agregada && agregada.correcto === false) {
-    return "❌ No se pudo guardar la esencia obtenida.";
+  if (nivel >= 150) {
+    materiales.push("cristal_arcano");
+  }
+
+  if (nivel >= 400) {
+    materiales.push("nucleo_elemental");
+  }
+
+  return materiales[
+    Math.floor(Math.random() * materiales.length)
+  ];
+}
+
+async function ejecutarMineria(perfil) {
+  const esencias = {
+    normal: 0,
+    epica: 0,
+    legendaria: 0
+  };
+
+  const materialesObtenidos = {};
+  let intentosRealizados = 0;
+
+  for (let i = 0; i < 3; i++) {
+    const resultado = consumirIntentoMina(perfil);
+
+    if (!resultado || !resultado.correcto) {
+      break;
+    }
+
+    intentosRealizados++;
+
+    const esencia = obtenerEsenciaMina();
+
+    const agregada = agregarEsencia(
+      perfil,
+      esencia,
+      1
+    );
+
+    if (agregada && agregada.correcto === false) {
+      break;
+    }
+
+    esencias[esencia]++;
+
+    const mineral = obtenerMineralMina(
+      Number(perfil.nivel) || 1
+    );
+
+    const cantidadMineral = 1 + Math.floor(Math.random() * 2);
+
+    agregarMaterial(
+      perfil,
+      mineral,
+      cantidadMineral
+    );
+
+    materialesObtenidos[mineral] =
+      (materialesObtenidos[mineral] || 0) + cantidadMineral;
   }
 
   await guardarPerfil(perfil);
+
+  if (intentosRealizados === 0) {
+    return (
+      "⛏️ No tenés intentos disponibles para minar.\n\n" +
+      "Disponés de 3 intentos cada 5 minutos."
+    );
+  }
 
   const nombres = {
     normal: "⚪ Esencia normal",
@@ -573,16 +651,31 @@ async function ejecutarMineria(perfil) {
     legendaria: "🟡 Esencia legendaria"
   };
 
-  return (
-    "⛏️━━━━━━━━━━━━━━━━━━⛏️\n" +
-    "       MINA DE ESENCIAS\n" +
-    "⛏️━━━━━━━━━━━━━━━━━━⛏️\n\n" +
-    "🎉 ¡Encontraste una esencia!\n\n" +
-    `${nombres[esencia]}\n\n` +
-    `🔋 Intentos restantes: ${resultado.intentos}/3\n\n` +
-    "📦 La esencia fue guardada en tu inventario.\n\n" +
-    "⛏️━━━━━━━━━━━━━━━━━━⛏️"
-  );
+  let texto =
+    "⛏️━━━━━━━━━━━━━━━━━━━━⛏️\n" +
+    "       MINA DE SLAYERS RBSN\n" +
+    "⛏️━━━━━━━━━━━━━━━━━━━━⛏️\n\n" +
+    `🎉 Intentos utilizados: ${intentosRealizados}/3\n\n` +
+    "✨ ESENCIAS OBTENIDAS\n\n";
+
+  for (const rareza of ["normal", "epica", "legendaria"]) {
+    if (esencias[rareza] > 0) {
+      texto +=
+        `${nombres[rareza]}: x${esencias[rareza]}\n`;
+    }
+  }
+
+  texto += "\n⛏️ MINERALES OBTENIDOS\n\n";
+
+  for (const [material, cantidad] of Object.entries(materialesObtenidos)) {
+    texto += `• ${material}: x${cantidad}\n`;
+  }
+
+  texto +=
+    "\n📦 Todo fue guardado en tu inventario.\n" +
+    "⛏️━━━━━━━━━━━━━━━━━━━━⛏️";
+
+  return texto;
 }
 
 // =====================================
@@ -602,12 +695,14 @@ function mostrarAyuda() {
 &estadisticas
 &saldo
 &inventario
+&materiales
 &zona de caza
 
-⛏️ MINA DE ESENCIAS
+⛏️ MINERÍA
 &minar
-3 intentos cada 5 minutos.
-70% normal, 25% épica y 5% legendaria.
+3 intentos por comando cada 5 minutos.
+70% esencia normal, 25% épica y 5% legendaria.
+También podés conseguir minerales para fabricar equipamiento.
 
 💎 ECONOMÍA
 &banco
@@ -618,13 +713,24 @@ function mostrarAyuda() {
 &reserva:agregar:cantidad
 &reserva:retirar:cantidad
 
-✨ COMANDOS DE ESENCIAS
+✨ ESENCIAS
 &usar:esencia:normal
 &usar:esencia:epica
 &usar:esencia:legendaria
 
 También podés indicar una cantidad:
 &usar:esencia:normal:5
+
+⚒️ HERRERÍA
+&herrero
+&herrero:armas
+&herrero:armaduras
+&herrero:buscar:id
+&fabricar:id
+&equipar:arma:id
+&equipar:armadura:id
+&desequipar:arma
+&desequipar:armadura
 
 🌟 RENACIMIENTO
 &renacer
@@ -652,7 +758,7 @@ Los Bosses aparecen cada 50 niveles:
 &ranking victorias
 &ranking rubies
 
-━━━━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━━━
 Usá & antes de cada comando.`;
 }
 
@@ -699,7 +805,7 @@ function textoBosses() {
   });
 
   texto +=
-    "\n━━━━━━━━━━━━━━━━━━\n" +
+    "\n━━━━━━━━━━━━━━━━━━━━\n" +
     "Usá &info boss nivel para conocer sus estadísticas.";
 
   return texto;
@@ -722,22 +828,22 @@ function textoInfoBoss(nivel) {
   }
 
   return (
-    "👑━━━━━━━━━━━━━━━━━━👑\n" +
+    "👑━━━━━━━━━━━━━━━━━━━━👑\n" +
     "       INFORMACIÓN DEL BOSS\n" +
-    "👑━━━━━━━━━━━━━━━━━━👑\n\n" +
+    "👑━━━━━━━━━━━━━━━━━━━━👑\n\n" +
     `🔥 Nombre: ${boss.nombre}\n` +
     `📊 Nivel: ${boss.nivel}\n` +
     `👁️ Apariencia: ${boss.apariencia}\n\n` +
-    "━━━━━━━━━━━━━━━━━━\n" +
+    "━━━━━━━━━━━━━━━━━━━━\n" +
     "📊 ESTADÍSTICAS\n\n" +
     `❤️ Vida: ${boss.vida}\n` +
     `⚔️ Ataque: ${boss.ataque}\n` +
     `🛡️ Defensa: ${boss.defensa}\n` +
     `⭐ Experiencia: ${boss.experiencia} XP\n\n` +
-    "━━━━━━━━━━━━━━━━━━\n" +
-    "💚 Regeneración: 1.01 puntos cada 1.8 segundos.\n" +
+    "━━━━━━━━━━━━━━━━━━━━\n" +
+    "💚 El Boss regenera vida durante el combate.\n" +
     "⚔️ No tiene límite de tiempo.\n\n" +
-    "👑━━━━━━━━━━━━━━━━━━👑"
+    "👑━━━━━━━━━━━━━━━━━━━━👑"
   );
 }
 
@@ -756,17 +862,18 @@ function textoZonaCaza(perfil) {
   const proximoBoss = obtenerProximoBoss(nivelJugador);
 
   let texto =
-    "🌲━━━━━━━━━━━━━━━━━━🌲\n" +
+    "🌲━━━━━━━━━━━━━━━━━━━━🌲\n" +
     "        ZONA DE CAZA\n" +
-    "🌲━━━━━━━━━━━━━━━━━━🌲\n\n";
+    "🌲━━━━━━━━━━━━━━━━━━━━🌲\n\n";
 
   texto +=
     "🗺️ Zona compartida de Slayers Rbsn\n" +
     "⚔️ Todos los aventureros pueden explorar esta zona.\n\n";
 
   texto +=
-    `🧙 Tu nivel: ${nivelJugador}\n\n` +
-    "━━━━━━━━━━━━━━━━━━\n" +
+    `🧙 Tu nivel: ${nivelJugador}\n` +
+    `🎯 Nivel de caza: ${Math.max(1, nivelJugador - 1)}\n\n` +
+    "━━━━━━━━━━━━━━━━━━━━\n" +
     "👹 MONSTRUOS DE LA ZONA\n\n";
 
   if (!enemigos || enemigos.length === 0) {
@@ -784,11 +891,11 @@ function textoZonaCaza(perfil) {
   }
 
   texto +=
-    "━━━━━━━━━━━━━━━━━━\n" +
+    "━━━━━━━━━━━━━━━━━━━━\n" +
     "📈 ADAPTACIÓN DE MONSTRUOS\n\n" +
     "Los monstruos aumentan sus estadísticas según tu nivel.\n" +
     "Sus recompensas también crecen con tu progreso.\n\n" +
-    "━━━━━━━━━━━━━━━━━━\n" +
+    "━━━━━━━━━━━━━━━━━━━━\n" +
     "👑 PRÓXIMO BOSS\n\n";
 
   if (proximoBoss) {
@@ -801,7 +908,7 @@ function textoZonaCaza(perfil) {
   }
 
   texto +=
-    "🌲━━━━━━━━━━━━━━━━━━🌲\n" +
+    "🌲━━━━━━━━━━━━━━━━━━━━🌲\n" +
     "Usá &cazar para iniciar una batalla automática.";
 
   return texto;
@@ -899,6 +1006,47 @@ async function ejecutarBatalla(perfil, combate) {
 }
 
 // =====================================
+// BOTÍN DE MATERIALES
+// =====================================
+
+function entregarMaterialesBatalla(perfil, enemigo) {
+  if (typeof obtenerBotinMateriales !== "function") {
+    return [];
+  }
+
+  const botin = obtenerBotinMateriales(enemigo);
+
+  if (!botin) {
+    return [];
+  }
+
+  const materiales = Array.isArray(botin)
+    ? botin
+    : [botin];
+
+  const entregados = [];
+
+  for (const material of materiales) {
+    if (!material) continue;
+
+    const id = material.id || material.material;
+
+    const cantidad = Number(material.cantidad) || 1;
+
+    if (!id) continue;
+
+    agregarMaterial(perfil, id, cantidad);
+
+    entregados.push({
+      id,
+      cantidad
+    });
+  }
+
+  return entregados;
+}
+
+// =====================================
 // CONSTRUIR INFORME DE BATALLA
 // =====================================
 
@@ -909,9 +1057,9 @@ function construirInformeBatalla(
   final
 ) {
   let mensaje =
-    "⚔️━━━━━━━━━━━━━━━━━━⚔️\n" +
+    "⚔️━━━━━━━━━━━━━━━━━━━━⚔️\n" +
     "       INFORME DE BATALLA\n" +
-    "⚔️━━━━━━━━━━━━━━━━━━⚔️\n\n";
+    "⚔️━━━━━━━━━━━━━━━━━━━━⚔️\n\n";
 
   mensaje +=
     `${enemigo.esBoss ? "👑 BOSS: " : "👹 Enemigo: "}${enemigo.nombre}\n` +
@@ -928,7 +1076,7 @@ function construirInformeBatalla(
   });
 
   mensaje +=
-    "\n━━━━━━━━━━━━━━━━━━\n" +
+    "\n━━━━━━━━━━━━━━━━━━━━\n" +
     "📊 ESTADÍSTICAS DE BATALLA\n\n" +
     `🔄 Rondas: ${batalla.rondas}\n` +
     `🗡️ Tus ataques: ${batalla.ataquesJugador}\n` +
@@ -945,7 +1093,7 @@ function construirInformeBatalla(
     `\n❤️ Tu vida final: ${perfil.estadisticas.vida}/${perfil.estadisticas.vidaMaxima}\n` +
     `👹 Vida final del enemigo: ${batalla.combate.enemigo.vida}/${batalla.combate.enemigo.vidaMaxima}\n\n`;
 
-  mensaje += "━━━━━━━━━━━━━━━━━━\n";
+  mensaje += "━━━━━━━━━━━━━━━━━━━━\n";
 
   if (final.resultado === "victoria") {
     const rubies = calcularRubies(
@@ -956,15 +1104,13 @@ function construirInformeBatalla(
     perfil.rubies =
       (Number(perfil.rubies) || 0) + rubies;
 
-    perfil.monedas = perfil.rubies;
-
     perfil.estadisticas.rubiesObtenidos =
       (Number(perfil.estadisticas.rubiesObtenidos) || 0) +
       rubies;
 
     const botin = calcularBotin(enemigo);
 
-    let mensajeBotin = "🎁 Botín: No encontraste objetos.";
+    let mensajeBotin = "🎁 Botín: No encontraste esencias.";
 
     if (botin) {
       agregarEsencia(perfil, botin, 1);
@@ -979,11 +1125,25 @@ function construirInformeBatalla(
         `🎁 Botín obtenido: ${nombres[botin]}`;
     }
 
+    const materiales = entregarMaterialesBatalla(
+      perfil,
+      enemigo
+    );
+
+    let mensajeMateriales = "No encontraste materiales.";
+
+    if (materiales.length > 0) {
+      mensajeMateriales = materiales
+        .map(item => `${item.id}: x${item.cantidad}`)
+        .join("\n");
+    }
+
     mensaje +=
       `${enemigo.esBoss ? "👑 ¡BOSS DERROTADO!\n\n" : "🏆 ¡VICTORIA!\n\n"}` +
       `⭐ Experiencia: +${final.experiencia || 0} XP\n` +
       `💎 Rubíes obtenidos: +${rubies}\n` +
-      `${mensajeBotin}\n\n`;
+      `${mensajeBotin}\n\n` +
+      `⛏️ Materiales obtenidos:\n${mensajeMateriales}\n\n`;
 
     if (enemigo.esBoss) {
       mensaje += "🏆 Boss registrado en tus estadísticas.\n\n";
@@ -1000,14 +1160,78 @@ function construirInformeBatalla(
     mensaje +=
       "💀 ¡HAS SIDO DERROTADO!\n\n" +
       `📉 Experiencia perdida: ${final.perdidaExperiencia || 0} XP\n` +
-      `⭐ Experiencia restante: ${final.experienciaRestante || 0} XP\n` +
-      "💎 Rubíes perdidos: 0\n" +
-      "⏳ Regeneración bloqueada: 5 minutos\n";
+      `⭐ Experiencia restante: ${final.experienciaRestante ?? perfil.experiencia} XP\n` +
+      "💎 No perdiste rubíes.\n" +
+      "❤️ Tu vida comenzará a regenerarse normalmente.";
   }
 
-  mensaje += "\n⚔️━━━━━━━━━━━━━━━━━━⚔️";
+  mensaje += "\n⚔️━━━━━━━━━━━━━━━━━━━━⚔️";
 
   return mensaje;
+}
+
+// =====================================
+// COMANDO MATE
+// =====================================
+
+async function ejecutarMate(perfil) {
+  normalizarPerfil(perfil);
+
+  if (perfil.mateUsado) {
+    return "🧉 Ya utilizaste el regalo especial de Mate. Solo se puede usar una vez.";
+  }
+
+  perfil.mateUsado = true;
+
+  if (Number(perfil.nivel) < 10) {
+    perfil.nivel = 10;
+
+    const renacer = Number(perfil.renacer) || 0;
+    const multiplicador = Math.pow(2, renacer);
+
+    perfil.estadisticas.vidaMaxima =
+      (100 + 9 * 10) * multiplicador;
+
+    perfil.estadisticas.ataque =
+      (10 + 9 * 2) * multiplicador;
+
+    perfil.estadisticas.defensa =
+      (5 + 9) * multiplicador;
+
+    perfil.estadisticas.vida =
+      perfil.estadisticas.vidaMaxima;
+
+    perfil.experiencia = 0;
+  }
+
+  perfil.inventario = perfil.inventario || {};
+  perfil.inventario.objetos = perfil.inventario.objetos || [];
+
+  const espada = obtenerEspadaMate();
+
+  const yaTieneEspada = perfil.inventario.objetos.some(
+    objeto => objeto.id === espada.id
+  );
+
+  if (!yaTieneEspada) {
+    const { agregarObjeto } = require("./systems/inventario");
+    agregarObjeto(perfil, espada);
+  }
+
+  await guardarPerfil(perfil);
+
+  return (
+    "🧉━━━━━━━━━━━━━━━━━━━━🧉\n" +
+    "       ¡REGALO ESPECIAL!\n" +
+    "🧉━━━━━━━━━━━━━━━━━━━━🧉\n\n" +
+    "¡Un buen mate para comenzar tu aventura!\n\n" +
+    `⭐ Nivel actual: ${perfil.nivel}\n` +
+    "⚔️ Recibiste una Espada común.\n" +
+    "🗡️ Ataque adicional: +5\n\n" +
+    "🎁 El regalo solo se puede reclamar una vez.\n" +
+    "¡Que comience tu aventura en Slayers Rbsn!\n\n" +
+    "🧉━━━━━━━━━━━━━━━━━━━━🧉"
+  );
 }
 
 // =====================================
@@ -1050,10 +1274,18 @@ async function procesarComando(
       !perfil.renacerPendiente &&
       !(perfil.nivel >= 25 && !perfil.elementos.segundo)
     ) {
-      return "❌ Ya estás registrado. No puedes volver a registrarte ni cambiar tu elemento.";
+      return "❌ Ya estás registrado. No podés volver a registrarte ni cambiar tu elemento.";
     }
 
     return registrarElemento(perfil, datos[1]);
+  }
+
+  // =====================================
+  // COMANDO OCULTO MATE
+  // =====================================
+
+  if (comando === "&mate") {
+    return await ejecutarMate(perfil);
   }
 
   // =====================================
@@ -1085,7 +1317,7 @@ async function procesarComando(
   }
 
   // =====================================
-  // MINA DE ESENCIAS
+  // MINERÍA
   // =====================================
 
   if (comando === "&minar") {
@@ -1112,12 +1344,16 @@ async function procesarComando(
   // ECONOMÍA
   // =====================================
 
-  if (comando === "&saldo") {
+  if (comando === "&saldo" || comando === "&banco") {
     return mostrarEconomia(perfil);
   }
 
   if (comando === "&inventario") {
     return mostrarInventario(perfil);
+  }
+
+  if (comando === "&materiales") {
+    return mostrarMateriales(perfil);
   }
 
   if (
@@ -1127,8 +1363,106 @@ async function procesarComando(
     return textoZonaCaza(perfil);
   }
 
-  if (comando === "&banco") {
-    return mostrarEconomia(perfil);
+  // =====================================
+  // HERRERÍA
+  // =====================================
+
+  if (comando === "&herrero") {
+    return mostrarHerreria(perfil);
+  }
+
+  if (comando.startsWith("&herrero:")) {
+    const datos = comando.split(":");
+
+    if (datos[1] === "armas") {
+      return listarEquipamiento("arma", perfil);
+    }
+
+    if (datos[1] === "armaduras") {
+      return listarEquipamiento("armadura", perfil);
+    }
+
+    if (datos[1] === "buscar" && datos[2]) {
+      const resultado = consultarReceta(datos[2]);
+
+      return resultado.mensaje;
+    }
+
+    return (
+      "❌ Comando de herrería inválido.\n\n" +
+      "&herrero\n" +
+      "&herrero:armas\n" +
+      "&herrero:armaduras\n" +
+      "&herrero:buscar:id"
+    );
+  }
+
+  if (comando.startsWith("&fabricar:")) {
+    const datos = comando.split(":");
+
+    if (datos.length !== 2 || !datos[1]) {
+      return "❌ Formato incorrecto. Usá &fabricar:id";
+    }
+
+    const resultado = fabricarEquipo(perfil, datos[1]);
+
+    await guardarPerfil(perfil);
+
+    return resultado.mensaje;
+  }
+
+  if (comando.startsWith("&equipar:")) {
+    const datos = comando.split(":");
+
+    if (
+      datos.length !== 3 ||
+      !["arma", "armadura"].includes(datos[1]) ||
+      !datos[2]
+    ) {
+      return (
+        "❌ Formato incorrecto.\n\n" +
+        "&equipar:arma:id\n" +
+        "&equipar:armadura:id"
+      );
+    }
+
+    const resultado = equiparEquipo(
+      perfil,
+      datos[1],
+      datos[2]
+    );
+
+    if (resultado.correcto) {
+      await guardarPerfil(perfil);
+    }
+
+    return resultado.mensaje;
+  }
+
+  if (comando.startsWith("&desequipar:")) {
+    const datos = comando.split(":");
+
+    if (
+      datos.length !== 2 ||
+      !["arma", "armadura"].includes(datos[1])
+    ) {
+      return (
+        "❌ Formato incorrecto.\n\n" +
+        "&desequipar:arma\n" +
+        "&desequipar:armadura"
+      );
+    }
+
+    const resultado = desequiparEquipo(
+      perfil,
+      datos[1]
+    );
+
+    if (resultado.correcto) {
+      await guardarPerfil(perfil);
+    }
+
+    return resultado.mensaje;
   }
 
   // =====================================
@@ -1260,7 +1594,6 @@ async function procesarComando(
     ) {
       return (
         "❌ Formato incorrecto.\n\n" +
-        "Usá:\n" +
         "&usar:esencia:normal\n" +
         "&usar:esencia:epica\n" +
         "&usar:esencia:legendaria\n" +
@@ -1273,6 +1606,13 @@ async function procesarComando(
     const cantidad = datos.length === 4
       ? Number(datos[3])
       : 1;
+
+    if (
+      !Number.isSafeInteger(cantidad) ||
+      cantidad <= 0
+    ) {
+      return "❌ Ingresá una cantidad válida.";
+    }
 
     const resultado = usarEsencia(
       perfil,
@@ -1291,6 +1631,7 @@ async function procesarComando(
 
   // =====================================
   // CAZAR AUTOMÁTICAMENTE
+  // MONSTRUO UN NIVEL INFERIOR
   // =====================================
 
   if (comando === "&cazar") {
@@ -1307,9 +1648,15 @@ async function procesarComando(
     const enemigoElegido =
       enemigos[Math.floor(Math.random() * enemigos.length)];
 
+    const nivelEnemigo = Math.max(
+      1,
+      (Number(perfil.nivel) || 1) - 1
+    );
+
     const resultado = iniciarCombate(
       perfil,
-      enemigoElegido.id
+      enemigoElegido.id,
+      nivelEnemigo
     );
 
     if (resultado.error) {
@@ -1330,6 +1677,9 @@ async function procesarComando(
     );
 
     if (!batalla.combate.terminado) {
+      actualizarRegeneracion(perfil, false);
+      await guardarPerfil(perfil);
+
       return "⚠️ No se pudo completar la cacería. Intentá nuevamente.";
     }
 
@@ -1420,15 +1770,15 @@ async function procesarComando(
     });
 
     return (
-      "👑━━━━━━━━━━━━━━━━━━👑\n" +
+      "👑━━━━━━━━━━━━━━━━━━━━👑\n" +
       "       ¡DESAFÍO DE BOSS!\n" +
-      "👑━━━━━━━━━━━━━━━━━━👑\n\n" +
+      "👑━━━━━━━━━━━━━━━━━━━━👑\n\n" +
       `🔥 ${resultado.enemigo.nombre}\n` +
       `📊 Nivel: ${resultado.enemigo.nivel}\n` +
       `👁️ Apariencia: ${resultado.enemigo.apariencia}\n\n` +
       `❤️ Vida del Boss: ${resultado.enemigo.vida}/${resultado.enemigo.vidaMaxima}\n` +
       `❤️ Tu vida: ${resultado.jugador.vida}/${resultado.jugador.vidaMaxima}\n\n` +
-      "💚 El Boss regenera vida cada 1,8 segundos.\n" +
+      "💚 El Boss regenera vida durante el combate.\n" +
       "⚔️ No tiene límite de tiempo.\n\n" +
       "Usá &atacar para comenzar la batalla."
     );

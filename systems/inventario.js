@@ -422,7 +422,7 @@ const objetos = perfil.inventario.objetos;
 const listaObjetos = objetos.length > 0
 ? objetos.map((objeto, indice) =>
 "${indice + 1}. ${objeto.nombre} x${objeto.cantidad}\n" +
-"   📦 Tipo: ${objeto.tipo || "objeto"}\n" +
+`   📦 Tipo: ${objeto.tipo || "objeto"}\n` +
 "   📝 ${objeto.descripcion || "Sin descripción."}"
 ).join("\n\n")
 : "No tenés objetos.";

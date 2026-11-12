@@ -167,12 +167,15 @@ function agregarEquipo(tipo, elemento, datos, esUR = false) {
     rarezaNombre: datos.nombre,
     esUR,
     nivelRequerido: datos.nivel,
+
     ataque: tipo === "arma" ? bonificacion : 0,
     defensa: tipo === "armadura" ? bonificacion : 0,
+
     estadisticas: {
       ataque: tipo === "arma" ? bonificacion : 0,
       defensa: tipo === "armadura" ? bonificacion : 0
     },
+
     receta: crearReceta(datos, tipo),
     cantidad: 1
   };
@@ -180,15 +183,13 @@ function agregarEquipo(tipo, elemento, datos, esUR = false) {
   CATALOGO.push(objeto);
 }
 
-// Crear las 4 rarezas normales
+// Crear las 4 rarezas normales y los 3 rangos UR.
 
 for (const elemento of ELEMENTOS) {
   for (const rareza of RAREZAS) {
     agregarEquipo("arma", elemento, rareza);
     agregarEquipo("armadura", elemento, rareza);
   }
-
-  // Crear los 3 rangos UR
 
   for (const rango of RANGOS_UR) {
     agregarEquipo("arma", elemento, rango, true);
@@ -212,10 +213,12 @@ const ESPADA_COMUN = {
   nivelRequerido: 1,
   ataque: 5,
   defensa: 0,
+
   estadisticas: {
     ataque: 5,
     defensa: 0
   },
+
   receta: [],
   cantidad: 1
 };
@@ -374,7 +377,7 @@ function comprobarMateriales(perfil, receta) {
     const disponible = materiales[requerido.id];
 
     const cantidad = typeof disponible === "object"
-      ? Number(disponible.cantidad) || 0
+      ? Number(disponible?.cantidad) || 0
       : Number(disponible) || 0;
 
     if (cantidad < requerido.cantidad) {
@@ -511,7 +514,8 @@ function equiparEquipo(perfil, tipo, id) {
   const inventario = perfil.inventario?.objetos || [];
 
   const disponible = inventario.find(
-    item => item.id === objeto.id && (Number(item.cantidad) || 0) > 0
+    item => item.id === objeto.id &&
+      (Number(item.cantidad) || 0) > 0
   );
 
   if (!disponible) {

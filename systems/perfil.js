@@ -107,10 +107,14 @@ function crearPerfil(userId, username) {
         epica: 0,
         legendaria: 0
       },
-      objetos: []
+
+      objetos: [],
+
+      materiales: {}
     },
 
     equipamiento: {
+      arma: null,
       armadura: null
     },
 
@@ -120,6 +124,8 @@ function crearPerfil(userId, username) {
       intentos: INTENTOS_MINA_MAXIMOS,
       ultimaRecarga: Date.now()
     },
+
+    mateUsado: false,
 
     fechaCreacion: new Date().toISOString()
   };
@@ -295,9 +301,12 @@ function normalizarPerfil(perfil) {
         epica: 0,
         legendaria: 0
       },
+
       objetos: Array.isArray(perfil.inventario)
         ? perfil.inventario
-        : []
+        : [],
+
+      materiales: {}
     };
   }
 
@@ -307,19 +316,42 @@ function normalizarPerfil(perfil) {
     legendaria: Number(perfil.inventario.esencias?.legendaria) || 0
   };
 
-  perfil.inventario.objetos =
-    perfil.inventario.objetos || [];
+  if (!Array.isArray(perfil.inventario.objetos)) {
+    perfil.inventario.objetos = [];
+  }
+
+  if (
+    !perfil.inventario.materiales ||
+    typeof perfil.inventario.materiales !== "object" ||
+    Array.isArray(perfil.inventario.materiales)
+  ) {
+    perfil.inventario.materiales = {};
+  }
 
   // =================================
   // EQUIPAMIENTO
   // =================================
 
-  if (!perfil.equipamiento) {
+  if (
+    !perfil.equipamiento ||
+    typeof perfil.equipamiento !== "object"
+  ) {
     perfil.equipamiento = {};
   }
 
-  perfil.equipamiento.armadura =
-    perfil.equipamiento.armadura || null;
+  if (perfil.equipamiento.arma === undefined) {
+    perfil.equipamiento.arma = null;
+  }
+
+  if (perfil.equipamiento.armadura === undefined) {
+    perfil.equipamiento.armadura = null;
+  }
+
+  // =================================
+  // COMANDO MATE
+  // =================================
+
+  perfil.mateUsado = Boolean(perfil.mateUsado);
 
   // =================================
   // MINA
@@ -362,7 +394,6 @@ function actualizarMina(perfil) {
   normalizarPerfil(perfil);
 
   const ahora = Date.now();
-
   const mina = perfil.mina;
 
   const tiempoTranscurrido =
@@ -419,7 +450,7 @@ function consumirIntentoMina(perfil) {
     correcto: true,
     intentos: mina.intentos,
     mensaje:
-      `⛏️ Intento de minería utilizado.\n` +
+      "⛏️ Intento de minería utilizado.\n" +
       `🔋 Intentos restantes: ${mina.intentos}/${INTENTOS_MINA_MAXIMOS}`
   };
 }
@@ -503,7 +534,6 @@ function actualizarRegeneracion(perfil, enCombate = false) {
   normalizarPerfil(perfil);
 
   const ahora = Date.now();
-
   const regeneracion = perfil.regeneracion;
   const estadisticas = perfil.estadisticas;
 
@@ -667,6 +697,12 @@ function mostrarPerfil(perfil) {
       ? perfil.elementos.adicionales.join(", ")
       : "Ninguno";
 
+  const arma =
+    perfil.equipamiento.arma?.nombre || "Ninguna";
+
+  const armadura =
+    perfil.equipamiento.armadura?.nombre || "Ninguna";
+
   return `⚔️ SLAYERS RBSN — PERFIL
 
 👤 Jugador: ${perfil.nombre}
@@ -679,7 +715,6 @@ function mostrarPerfil(perfil) {
 💎 Rubíes: ${perfil.rubies}
 
 ❤️ Vida: ${perfil.estadisticas.vida}/${perfil.estadisticas.vidaMaxima}
-
 ⚔️ Ataque: ${perfil.estadisticas.ataque}
 🛡️ Defensa: ${perfil.estadisticas.defensa}
 
@@ -687,6 +722,9 @@ function mostrarPerfil(perfil) {
 ✨ Segundo elemento: ${segundoElemento}
 
 🌟 Elementos de renacimiento: ${elementosAdicionales}
+
+⚔️ Arma: ${arma}
+🛡️ Armadura: ${armadura}
 
 ⛏️ Mina: ${perfil.mina.intentos}/${INTENTOS_MINA_MAXIMOS} intentos disponibles
 

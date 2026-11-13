@@ -27,7 +27,9 @@ const {
   usarEsencia,
   agregarEsencia,
   agregarMaterial,
-  mostrarMateriales
+  mostrarMateriales,
+  agregarObjeto,
+  quitarObjeto
 } = require("./systems/inventario");
 
 const {
@@ -58,7 +60,8 @@ const {
   fabricarEquipo,
   equiparEquipo,
   desequiparEquipo,
-  obtenerEspadaMate
+  obtenerEspadaMate,
+  CATALOGO
 } = require("./systems/herreria");
 
 const {
@@ -205,7 +208,7 @@ async function cargarPerfil(userId, username) {
   if (combatesActivos.has(userId)) {
     const perfilActivo = combatesActivos.get(userId).perfil;
 
-    if (nombreValido) {
+    if (!perfilActivo.nombrePersonalizado && nombreValido) {
       perfilActivo.nombre = username.trim();
     }
 
@@ -223,7 +226,9 @@ async function cargarPerfil(userId, username) {
 
   normalizarPerfil(perfil);
 
-  if (nombreValido) {
+  perfil.nombrePersonalizado = Boolean(perfil.nombrePersonalizado);
+
+  if (!perfil.nombrePersonalizado && nombreValido) {
     perfil.nombre = username.trim();
   }
 
@@ -483,52 +488,62 @@ function validarCantidad(valor) {
 const DATOS_MATERIALES = {
   mineral_hierro: {
     nombre: "Mineral de hierro",
-    descripcion: "Mineral utilizado para fabricar equipamiento."
+    descripcion: "Mineral utilizado para fabricar equipamiento.",
+    precio: 25
   },
 
   mineral_plata: {
     nombre: "Mineral de plata",
-    descripcion: "Mineral utilizado para fabricar equipamiento."
+    descripcion: "Mineral utilizado para fabricar equipamiento.",
+    precio: 60
   },
 
   mineral_oro: {
     nombre: "Mineral de oro",
-    descripcion: "Mineral utilizado para fabricar equipamiento."
+    descripcion: "Mineral utilizado para fabricar equipamiento.",
+    precio: 120
   },
 
   cristal_arcano: {
     nombre: "Cristal arcano",
-    descripcion: "Cristal mágico utilizado en equipamiento avanzado."
+    descripcion: "Cristal mágico utilizado en equipamiento avanzado.",
+    precio: 300
   },
 
   nucleo_elemental: {
     nombre: "Núcleo elemental",
-    descripcion: "Material especial para equipamiento UR."
+    descripcion: "Material especial para equipamiento UR.",
+    precio: 1000
   },
 
   piel_monstruosa: {
     nombre: "Piel monstruosa",
-    descripcion: "Material obtenido al derrotar monstruos."
+    descripcion: "Material obtenido al derrotar monstruos.",
+    precio: 20
   },
 
   colmillo: {
     nombre: "Colmillo",
-    descripcion: "Material obtenido al derrotar monstruos."
+    descripcion: "Material obtenido al derrotar monstruos.",
+    precio: 25
   },
 
   hueso: {
     nombre: "Hueso",
-    descripcion: "Material utilizado para fabricar armaduras."
+    descripcion: "Material utilizado para fabricar armaduras.",
+    precio: 15
   },
 
   garra: {
     nombre: "Garra",
-    descripcion: "Material utilizado para fabricar armas."
+    descripcion: "Material utilizado para fabricar armas.",
+    precio: 30
   },
 
   fragmento_elemental: {
     nombre: "Fragmento elemental",
-    descripcion: "Fragmento mágico obtenido en aventuras."
+    descripcion: "Fragmento mágico obtenido en aventuras.",
+    precio: 100
   }
 };
 
@@ -558,6 +573,429 @@ function guardarMaterial(perfil, materialId, cantidad) {
     perfil,
     material,
     cantidad
+  );
+}
+
+// =====================================
+// PRECIOS DEL EQUIPAMIENTO
+// =====================================
+
+function precioEquipo(equipo) {
+  const nivel = Math.max(
+    1,
+    Number(equipo.nivelRequerido) || 1
+  );
+
+  const ataque = Math.max(
+    0,
+    Number(equipo.ataque) || 0
+  );
+
+  const defensa = Math.max(
+    0,
+    Number(equipo.defensa) || 0
+  );
+
+  const estadistica = Math.max(ataque, defensa);
+
+  const rareza = String(
+    equipo.rareza || equipo.rarezaNombre || ""
+  ).toLowerCase();
+
+  let multiplicador = 1;
+
+  if (equipo.esUR || rareza.includes("ur")) {
+    multiplicador = 10;
+  } else if (rareza.includes("mitic")) {
+    multiplicador = 7;
+  } else if (rareza.includes("legend")) {
+    multiplicador = 5;
+  } else if (rareza.includes("epic")) {
+    multiplicador = 3;
+  } else if (rareza.includes("rara")) {
+    multiplicador = 2;
+  } else if (
+    rareza.includes("poco") ||
+    rareza.includes("infrecuente")
+  ) {
+    multiplicador = 1.5;
+  }
+
+  return Math.max(
+    50,
+    Math.floor(
+      (100 + nivel * 12 + estadistica * 15) * multiplicador
+    )
+  );
+}
+
+// =====================================
+// MOSTRAR TIENDA
+// =====================================
+
+function mostrarTienda(perfil, categoria) {
+  const tipo = String(categoria || "").toLowerCase();
+
+  if (!tipo) {
+    return (
+      "🏪━━━━━━━━━━━━━━━━━━━━🏪\n" +
+      "        TIENDA DE SLAYERS\n" +
+      "🏪━━━━━━━━━━━━━━━━━━━━🏪\n\n" +
+      `💎 Tus rubíes: ${perfil.rubies || 0}\n\n` +
+      "⚔️ EQUIPAMIENTO\n" +
+      "&tienda:armas\n" +
+      "&tienda:armaduras\n\n" +
+      "⛏️ MATERIALES\n" +
+      "&tienda:materiales\n\n" +
+      "🛒 COMPRAS\n" +
+      "&comprar:arma:id\n" +
+      "&comprar:armadura:id\n" +
+      "&comprar:material:id:cantidad\n\n" +
+      "💰 VENDER EQUIPAMIENTO SOBRANTE\n" +
+      "&vender:sobras\n\n" +
+      "🏪━━━━━━━━━━━━━━━━━━━━🏪"
+    );
+  }
+
+  if (tipo === "materiales") {
+    let mensaje =
+      "⛏️━━━━━━━━━━━━━━━━━━━━⛏️\n" +
+      "       TIENDA DE MATERIALES\n" +
+      "⛏️━━━━━━━━━━━━━━━━━━━━⛏️\n\n";
+
+    for (const [id, material] of Object.entries(DATOS_MATERIALES)) {
+      mensaje +=
+        `📦 ${material.nombre}\n` +
+        `🆔 ID: ${id}\n` +
+        `💎 Precio: ${material.precio} rubíes por unidad\n\n`;
+    }
+
+    mensaje +=
+      "━━━━━━━━━━━━━━━━━━━━\n" +
+      "Para comprar:\n" +
+      "&comprar:material:id:cantidad";
+
+    return mensaje;
+  }
+
+  if (tipo !== "armas" && tipo !== "armaduras") {
+    return (
+      "❌ Categoría inválida.\n\n" +
+      "&tienda:armas\n" +
+      "&tienda:armaduras\n" +
+      "&tienda:materiales"
+    );
+  }
+
+  const tipoEquipo = tipo === "armas"
+    ? "arma"
+    : "armadura";
+
+  const nivelJugador = Number(perfil.nivel) || 1;
+
+  const equipos = CATALOGO
+    .filter(equipo => {
+      return (
+        equipo.tipo === tipoEquipo &&
+        (Number(equipo.nivelRequerido) || 1) <= nivelJugador
+      );
+    })
+    .sort((a, b) => {
+      const nivelA = Number(a.nivelRequerido) || 1;
+      const nivelB = Number(b.nivelRequerido) || 1;
+
+      if (nivelA !== nivelB) {
+        return nivelA - nivelB;
+      }
+
+      return precioEquipo(a) - precioEquipo(b);
+    });
+
+  if (equipos.length === 0) {
+    return "❌ No hay equipamiento disponible para tu nivel.";
+  }
+
+  let mensaje =
+    `🏪 TIENDA DE ${tipo.toUpperCase()}\n\n` +
+    `⭐ Tu nivel: ${nivelJugador}\n` +
+    `💎 Tus rubíes: ${perfil.rubies || 0}\n\n`;
+
+  equipos.forEach(equipo => {
+    const precio = precioEquipo(equipo);
+
+    mensaje +=
+      `━━━━━━━━━━━━━━━━━━━━\n` +
+      `⚔️ ${equipo.nombre}\n` +
+      `🆔 ID: ${equipo.id}\n` +
+      `⭐ Nivel requerido: ${equipo.nivelRequerido}\n`;
+
+    if (tipoEquipo === "arma") {
+      mensaje += `⚔️ Ataque: ${equipo.ataque || 0}\n`;
+    } else {
+      mensaje += `🛡️ Defensa: ${equipo.defensa || 0}\n`;
+    }
+
+    mensaje +=
+      `💎 Precio: ${precio} rubíes\n`;
+  });
+
+  mensaje +=
+    "\n━━━━━━━━━━━━━━━━━━━━\n" +
+    `Para comprar: &comprar:${tipoEquipo}:id`;
+
+  return mensaje;
+}
+
+// =====================================
+// COMPRAR EQUIPAMIENTO
+// =====================================
+
+async function comprarEquipamiento(perfil, tipo, id) {
+  const equipo = buscarEquipo(id);
+
+  if (!equipo) {
+    return "❌ No existe ese equipamiento.";
+  }
+
+  if (equipo.tipo !== tipo) {
+    return "❌ Ese objeto no pertenece a esa categoría.";
+  }
+
+  const nivelRequerido = Number(equipo.nivelRequerido) || 1;
+
+  if ((Number(perfil.nivel) || 1) < nivelRequerido) {
+    return (
+      `❌ Necesitás nivel ${nivelRequerido} para comprar este objeto.\n` +
+      `⭐ Tu nivel actual: ${perfil.nivel}`
+    );
+  }
+
+  const precio = precioEquipo(equipo);
+  const saldo = Number(perfil.rubies) || 0;
+
+  if (saldo < precio) {
+    return (
+      "❌ No tenés suficientes rubíes.\n\n" +
+      `💎 Precio: ${precio}\n` +
+      `💰 Tus rubíes: ${saldo}\n` +
+      `📉 Te faltan: ${precio - saldo}`
+    );
+  }
+
+  const resultado = agregarObjeto(perfil, equipo, 1);
+
+  if (resultado && resultado.correcto === false) {
+    return resultado.mensaje || "❌ No se pudo guardar el objeto.";
+  }
+
+  perfil.rubies = saldo - precio;
+
+  await guardarPerfil(perfil);
+
+  return (
+    "🛒 ¡COMPRA REALIZADA!\n\n" +
+    `⚔️ Objeto: ${equipo.nombre}\n` +
+    `💎 Precio pagado: ${precio} rubíes\n` +
+    `💰 Rubíes restantes: ${perfil.rubies}\n\n` +
+    "📦 El objeto fue guardado en tu inventario.\n" +
+    "Podés equiparlo cuando quieras."
+  );
+}
+
+// =====================================
+// COMPRAR MATERIALES
+// =====================================
+
+async function comprarMaterial(perfil, id, cantidad) {
+  const materialId = String(id || "").toLowerCase();
+  const material = DATOS_MATERIALES[materialId];
+
+  if (!material) {
+    return "❌ Ese material no existe en la tienda.";
+  }
+
+  const unidades = validarCantidad(cantidad);
+
+  if (!unidades) {
+    return "❌ Ingresá una cantidad válida.";
+  }
+
+  const total = material.precio * unidades;
+  const saldo = Number(perfil.rubies) || 0;
+
+  if (!Number.isSafeInteger(total)) {
+    return "❌ La cantidad solicitada es demasiado grande.";
+  }
+
+  if (saldo < total) {
+    return (
+      "❌ No tenés suficientes rubíes.\n\n" +
+      `📦 Material: ${material.nombre}\n` +
+      `🔢 Cantidad: ${unidades}\n` +
+      `💎 Precio total: ${total}\n` +
+      `💰 Tus rubíes: ${saldo}\n` +
+      `📉 Te faltan: ${total - saldo}`
+    );
+  }
+
+  const resultado = guardarMaterial(
+    perfil,
+    materialId,
+    unidades
+  );
+
+  if (resultado && resultado.correcto === false) {
+    return resultado.mensaje || "❌ No se pudo guardar el material.";
+  }
+
+  perfil.rubies = saldo - total;
+
+  await guardarPerfil(perfil);
+
+  return (
+    "🛒 ¡COMPRA REALIZADA!\n\n" +
+    `📦 Material: ${material.nombre}\n` +
+    `🔢 Cantidad: x${unidades}\n` +
+    `💎 Precio total: ${total} rubíes\n` +
+    `💰 Rubíes restantes: ${perfil.rubies}\n\n` +
+    "El material fue guardado en tu inventario."
+  );
+}
+
+// =====================================
+// VENDER EQUIPAMIENTO SOBRANTE
+// =====================================
+
+async function venderSobras(perfil) {
+  const objetos = perfil.inventario?.objetos || [];
+
+  const equipamiento = perfil.equipamiento || {};
+
+  let cantidadVendida = 0;
+  let rubiesObtenidos = 0;
+
+  const vendidos = [];
+
+  for (const objeto of [...objetos]) {
+    if (!objeto || !objeto.id) {
+      continue;
+    }
+
+    const equipo = buscarEquipo(objeto.id);
+
+    if (
+      !equipo ||
+      !["arma", "armadura"].includes(equipo.tipo)
+    ) {
+      continue;
+    }
+
+    const cantidad = Number(objeto.cantidad) || 0;
+
+    if (cantidad <= 0) {
+      continue;
+    }
+
+    const equipado = equipamiento[equipo.tipo];
+
+    const esEquipoEquipado =
+      equipado && equipado.id === objeto.id;
+
+    // Si está equipado, se conserva una unidad.
+    const unidadesAVender = esEquipoEquipado
+      ? Math.max(0, cantidad - 1)
+      : cantidad;
+
+    if (unidadesAVender <= 0) {
+      continue;
+    }
+
+    const precioVenta = Math.max(
+      1,
+      Math.floor(precioEquipo(equipo) * 0.35)
+    );
+
+    const resultado = quitarObjeto(
+      perfil,
+      objeto.id,
+      unidadesAVender
+    );
+
+    if (resultado && resultado.correcto === false) {
+      continue;
+    }
+
+    const ganancia = precioVenta * unidadesAVender;
+
+    rubiesObtenidos += ganancia;
+    cantidadVendida += unidadesAVender;
+
+    vendidos.push(
+      `${equipo.nombre}: x${unidadesAVender} (+${ganancia} 💎)`
+    );
+  }
+
+  if (cantidadVendida === 0) {
+    return (
+      "📦 No tenés equipamiento sobrante para vender.\n\n" +
+      "El arma y la armadura que llevás equipadas nunca se venden."
+    );
+  }
+
+  perfil.rubies =
+    (Number(perfil.rubies) || 0) + rubiesObtenidos;
+
+  await guardarPerfil(perfil);
+
+  return (
+    "💰━━━━━━━━━━━━━━━━━━━━💰\n" +
+    "       VENTA DE SOBRANTES\n" +
+    "💰━━━━━━━━━━━━━━━━━━━━💰\n\n" +
+    "📦 EQUIPAMIENTO VENDIDO\n\n" +
+    vendidos.join("\n") +
+    "\n\n━━━━━━━━━━━━━━━━━━━━\n" +
+    `⚔️ Unidades vendidas: ${cantidadVendida}\n` +
+    `💎 Rubíes obtenidos: +${rubiesObtenidos}\n` +
+    `💰 Saldo actual: ${perfil.rubies}\n\n` +
+    "🛡️ Tu equipamiento equipado fue protegido.\n" +
+    "💰━━━━━━━━━━━━━━━━━━━━💰"
+  );
+}
+
+// =====================================
+// CAMBIAR NOMBRE DEL JUGADOR
+// =====================================
+
+async function cambiarNombre(perfil, texto) {
+  const prefijo = "&cambionombre:";
+
+  const nuevoNombre = texto
+    .slice(prefijo.length)
+    .trim()
+    .replace(/\s+/g, " ")
+    .replace(/[\u0000-\u001F\u007F]/g, "");
+
+  if (!nuevoNombre) {
+    return (
+      "❌ Tenés que escribir el nuevo nombre.\n\n" +
+      "Ejemplo:\n" +
+      "&cambionombre:Mi nuevo nombre"
+    );
+  }
+
+  if (nuevoNombre.length < 2 || nuevoNombre.length > 24) {
+    return "❌ El nombre debe tener entre 2 y 24 caracteres.";
+  }
+
+  perfil.nombre = nuevoNombre;
+  perfil.nombrePersonalizado = true;
+
+  await guardarPerfil(perfil);
+
+  return (
+    "✨ ¡NOMBRE ACTUALIZADO!\n\n" +
+    `👤 Tu nuevo nombre es: ${perfil.nombre}\n\n` +
+    "El cambio fue guardado en tu perfil y se conservará aunque vuelvas a entrar."
   );
 }
 
@@ -781,6 +1219,7 @@ function mostrarAyuda() {
 &ayuda
 &perfil
 &estadisticas
+&cambionombre:nuevo nombre
 &saldo
 &inventario
 &materiales
@@ -813,6 +1252,22 @@ Muestra todos los objetos y esencias utilizables.
 
 También podés indicar una cantidad:
 &usar:esencia:normal:5
+
+🏪 TIENDA
+&tienda
+&tienda:armas
+&tienda:armaduras
+&tienda:materiales
+
+&comprar:arma:id
+&comprar:armadura:id
+&comprar:material:id:cantidad
+
+💰 VENDER EQUIPAMIENTO
+&vender:sobras
+
+Vende equipamiento sobrante.
+Nunca vende el arma ni la armadura que tengas equipadas.
 
 ⚒️ HERRERÍA
 &herrero
@@ -1334,7 +1789,6 @@ async function ejecutarMate(perfil) {
   );
 
   if (!yaTieneEspada) {
-    const { agregarObjeto } = require("./systems/inventario");
     agregarObjeto(perfil, espada);
   }
 
@@ -1498,6 +1952,24 @@ async function procesarComando(
   }
 
   // =====================================
+  // CAMBIAR NOMBRE
+  // =====================================
+
+  if (
+    comando === "&cambionombre" ||
+    texto.trim().toLowerCase().startsWith("&cambionombre:")
+  ) {
+    if (!texto.trim().toLowerCase().startsWith("&cambionombre:")) {
+      return (
+        "❌ Formato incorrecto.\n\n" +
+        "Usá: &cambionombre:nuevo nombre"
+      );
+    }
+
+    return await cambiarNombre(perfil, texto.trim());
+  }
+
+  // =====================================
   // RENACIMIENTO
   // =====================================
 
@@ -1558,6 +2030,78 @@ async function procesarComando(
     argumentos.join(" ").toLowerCase() === "de caza"
   ) {
     return textoZonaCaza(perfil);
+  }
+
+  // =====================================
+  // TIENDA
+  // =====================================
+
+  if (comando === "&tienda") {
+    return mostrarTienda(perfil);
+  }
+
+  if (comando.startsWith("&tienda:")) {
+    const categoria = comando.split(":")[1];
+
+    return mostrarTienda(perfil, categoria);
+  }
+
+  // =====================================
+  // COMPRAR EQUIPAMIENTO O MATERIALES
+  // =====================================
+
+  if (comando.startsWith("&comprar:")) {
+    const datos = comando.split(":");
+
+    if (
+      datos[1] === "arma" ||
+      datos[1] === "armadura"
+    ) {
+      if (datos.length !== 3 || !datos[2]) {
+        return (
+          "❌ Formato incorrecto.\n\n" +
+          "&comprar:arma:id\n" +
+          "&comprar:armadura:id"
+        );
+      }
+
+      return await comprarEquipamiento(
+        perfil,
+        datos[1],
+        datos[2]
+      );
+    }
+
+    if (datos[1] === "material") {
+      if (datos.length !== 4 || !datos[2] || !datos[3]) {
+        return (
+          "❌ Formato incorrecto.\n\n" +
+          "Usá: &comprar:material:id:cantidad\n" +
+          "Ejemplo: &comprar:material:mineral_hierro:5"
+        );
+      }
+
+      return await comprarMaterial(
+        perfil,
+        datos[2],
+        datos[3]
+      );
+    }
+
+    return (
+      "❌ Tipo de compra inválido.\n\n" +
+      "&comprar:arma:id\n" +
+      "&comprar:armadura:id\n" +
+      "&comprar:material:id:cantidad"
+    );
+  }
+
+  // =====================================
+  // VENDER SOBRANTES
+  // =====================================
+
+  if (comando === "&vender:sobras") {
+    return await venderSobras(perfil);
   }
 
   // =====================================

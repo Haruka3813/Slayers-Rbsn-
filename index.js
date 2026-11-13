@@ -23,6 +23,7 @@ const {
 
 const {
   mostrarInventario,
+  mostrarUsables,
   usarEsencia,
   agregarEsencia,
   agregarMaterial,
@@ -476,6 +477,91 @@ function validarCantidad(valor) {
 }
 
 // =====================================
+// CATÁLOGO DE MATERIALES
+// =====================================
+
+const DATOS_MATERIALES = {
+  mineral_hierro: {
+    nombre: "Mineral de hierro",
+    descripcion: "Mineral utilizado para fabricar equipamiento."
+  },
+
+  mineral_plata: {
+    nombre: "Mineral de plata",
+    descripcion: "Mineral utilizado para fabricar equipamiento."
+  },
+
+  mineral_oro: {
+    nombre: "Mineral de oro",
+    descripcion: "Mineral utilizado para fabricar equipamiento."
+  },
+
+  cristal_arcano: {
+    nombre: "Cristal arcano",
+    descripcion: "Cristal mágico utilizado en equipamiento avanzado."
+  },
+
+  nucleo_elemental: {
+    nombre: "Núcleo elemental",
+    descripcion: "Material especial para equipamiento UR."
+  },
+
+  piel_monstruosa: {
+    nombre: "Piel monstruosa",
+    descripcion: "Material obtenido al derrotar monstruos."
+  },
+
+  colmillo: {
+    nombre: "Colmillo",
+    descripcion: "Material obtenido al derrotar monstruos."
+  },
+
+  hueso: {
+    nombre: "Hueso",
+    descripcion: "Material utilizado para fabricar armaduras."
+  },
+
+  garra: {
+    nombre: "Garra",
+    descripcion: "Material utilizado para fabricar armas."
+  },
+
+  fragmento_elemental: {
+    nombre: "Fragmento elemental",
+    descripcion: "Fragmento mágico obtenido en aventuras."
+  }
+};
+
+// =====================================
+// AGREGAR MATERIAL CORRECTAMENTE
+// =====================================
+
+function guardarMaterial(perfil, materialId, cantidad) {
+  if (!materialId) {
+    return false;
+  }
+
+  const id = String(materialId).toLowerCase();
+
+  const datos = DATOS_MATERIALES[id] || {
+    nombre: id.replace(/_/g, " "),
+    descripcion: "Material obtenido durante una aventura."
+  };
+
+  const material = {
+    id,
+    nombre: datos.nombre,
+    descripcion: datos.descripcion
+  };
+
+  return agregarMaterial(
+    perfil,
+    material,
+    cantidad
+  );
+}
+
+// =====================================
 // RECOMPENSA DE RUBÍES
 // =====================================
 
@@ -626,7 +712,7 @@ async function ejecutarMineria(perfil) {
 
     const cantidadMineral = 1 + Math.floor(Math.random() * 2);
 
-    agregarMaterial(
+    guardarMaterial(
       perfil,
       mineral,
       cantidadMineral
@@ -668,7 +754,9 @@ async function ejecutarMineria(perfil) {
   texto += "\n⛏️ MINERALES OBTENIDOS\n\n";
 
   for (const [material, cantidad] of Object.entries(materialesObtenidos)) {
-    texto += `• ${material}: x${cantidad}\n`;
+    const nombre = DATOS_MATERIALES[material]?.nombre || material;
+
+    texto += `• ${nombre}: x${cantidad}\n`;
   }
 
   texto +=
@@ -700,6 +788,7 @@ function mostrarAyuda() {
 
 ⛏️ MINERÍA
 &minar
+
 3 intentos por comando cada 5 minutos.
 70% esencia normal, 25% épica y 5% legendaria.
 También podés conseguir minerales para fabricar equipamiento.
@@ -713,7 +802,11 @@ También podés conseguir minerales para fabricar equipamiento.
 &reserva:agregar:cantidad
 &reserva:retirar:cantidad
 
-✨ ESENCIAS
+✨ ESENCIAS Y OBJETOS
+&usar
+
+Muestra todos los objetos y esencias utilizables.
+
 &usar:esencia:normal
 &usar:esencia:epica
 &usar:esencia:legendaria
@@ -727,13 +820,19 @@ También podés indicar una cantidad:
 &herrero:armaduras
 &herrero:buscar:id
 &fabricar:id
+
 &equipar:arma:id
 &equipar:armadura:id
+
+&equipar:arma:Mejor
+&equipar:armadura:Mejor
+
 &desequipar:arma
 &desequipar:armadura
 
 🌟 RENACIMIENTO
 &renacer
+
 Disponible al alcanzar el nivel 500.
 
 ⚔️ COMANDOS RPG
@@ -1020,22 +1119,40 @@ function entregarMaterialesBatalla(perfil, enemigo) {
     return [];
   }
 
-  const materiales = Array.isArray(botin)
-    ? botin
-    : [botin];
+  let materiales = [];
+
+  if (Array.isArray(botin)) {
+    materiales = botin;
+  } else if (Array.isArray(botin.materiales)) {
+    materiales = botin.materiales;
+  } else {
+    materiales = [botin];
+  }
 
   const entregados = [];
 
   for (const material of materiales) {
     if (!material) continue;
 
-    const id = material.id || material.material;
+    const id = typeof material === "string"
+      ? material
+      : material.id || material.material;
 
-    const cantidad = Number(material.cantidad) || 1;
+    const cantidad = typeof material === "string"
+      ? 1
+      : Number(material.cantidad) || 1;
 
     if (!id) continue;
 
-    agregarMaterial(perfil, id, cantidad);
+    const resultado = guardarMaterial(
+      perfil,
+      id,
+      cantidad
+    );
+
+    if (resultado && resultado.correcto === false) {
+      continue;
+    }
 
     entregados.push({
       id,
@@ -1134,7 +1251,10 @@ function construirInformeBatalla(
 
     if (materiales.length > 0) {
       mensajeMateriales = materiales
-        .map(item => `${item.id}: x${item.cantidad}`)
+        .map(item => {
+          const nombre = DATOS_MATERIALES[item.id]?.nombre || item.id;
+          return `${nombre}: x${item.cantidad}`;
+        })
         .join("\n");
     }
 
@@ -1231,6 +1351,83 @@ async function ejecutarMate(perfil) {
     "🎁 El regalo solo se puede reclamar una vez.\n" +
     "¡Que comience tu aventura en Slayers Rbsn!\n\n" +
     "🧉━━━━━━━━━━━━━━━━━━━━🧉"
+  );
+}
+
+// =====================================
+// BUSCAR EL MEJOR EQUIPAMIENTO
+// =====================================
+
+function equiparMejorEquipo(perfil, tipo) {
+  if (!["arma", "armadura"].includes(tipo)) {
+    return {
+      correcto: false,
+      mensaje: "❌ Tipo de equipamiento inválido."
+    };
+  }
+
+  const objetos = perfil.inventario?.objetos || [];
+  const nivel = Number(perfil.nivel) || 1;
+
+  const candidatos = objetos
+    .filter(item => item && item.id)
+    .map(item => {
+      const equipo = buscarEquipo(item.id);
+
+      if (!equipo || equipo.tipo !== tipo) {
+        return null;
+      }
+
+      return {
+        item,
+        equipo
+      };
+    })
+    .filter(Boolean)
+    .filter(({ item, equipo }) => {
+      const cantidad = Number(item.cantidad) || 0;
+
+      return (
+        cantidad > 0 &&
+        nivel >= (Number(equipo.nivelRequerido) || 1)
+      );
+    });
+
+  if (candidatos.length === 0) {
+    return {
+      correcto: false,
+      mensaje:
+        tipo === "arma"
+          ? "❌ No tenés armas disponibles para equipar."
+          : "❌ No tenés armaduras disponibles para equipar."
+    };
+  }
+
+  candidatos.sort((a, b) => {
+    const statA = tipo === "arma"
+      ? Number(a.equipo.ataque) || 0
+      : Number(a.equipo.defensa) || 0;
+
+    const statB = tipo === "arma"
+      ? Number(b.equipo.ataque) || 0
+      : Number(b.equipo.defensa) || 0;
+
+    if (statB !== statA) {
+      return statB - statA;
+    }
+
+    return (
+      (Number(b.equipo.nivelRequerido) || 1) -
+      (Number(a.equipo.nivelRequerido) || 1)
+    );
+  });
+
+  const mejor = candidatos[0].equipo;
+
+  return equiparEquipo(
+    perfil,
+    tipo,
+    mejor.id
   );
 }
 
@@ -1422,15 +1619,26 @@ async function procesarComando(
       return (
         "❌ Formato incorrecto.\n\n" +
         "&equipar:arma:id\n" +
-        "&equipar:armadura:id"
+        "&equipar:armadura:id\n" +
+        "&equipar:arma:Mejor\n" +
+        "&equipar:armadura:Mejor"
       );
     }
 
-    const resultado = equiparEquipo(
-      perfil,
-      datos[1],
-      datos[2]
-    );
+    let resultado;
+
+    if (datos[2].toLowerCase() === "mejor") {
+      resultado = equiparMejorEquipo(
+        perfil,
+        datos[1]
+      );
+    } else {
+      resultado = equiparEquipo(
+        perfil,
+        datos[1],
+        datos[2]
+      );
+    }
 
     if (resultado.correcto) {
       await guardarPerfil(perfil);
@@ -1581,6 +1789,14 @@ async function procesarComando(
   }
 
   // =====================================
+  // MOSTRAR OBJETOS UTILIZABLES
+  // =====================================
+
+  if (comando === "&usar") {
+    return mostrarUsables(perfil);
+  }
+
+  // =====================================
   // USAR ESENCIAS
   // =====================================
 
@@ -1594,6 +1810,7 @@ async function procesarComando(
     ) {
       return (
         "❌ Formato incorrecto.\n\n" +
+        "Usá &usar para ver los objetos utilizables.\n\n" +
         "&usar:esencia:normal\n" +
         "&usar:esencia:epica\n" +
         "&usar:esencia:legendaria\n" +
